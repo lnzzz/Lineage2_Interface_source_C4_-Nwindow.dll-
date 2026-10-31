@@ -5,6 +5,9 @@
     WindowProc (0x10057b10).
 =============================================================================*/
 #include "nwindow/NCInvenItemWnd.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomAutoPotion.h"
+#endif
 #include "nwindow/NCButton.h"
 #include "nwindow/NCConsole.h"
 #include "nwindow/NCDialogBox.h"
@@ -391,6 +394,16 @@ INT NCInvenItemWnd::OnLButtonUp(WPARAM wParam, LPARAM lParam)
             if (Found && Found->Wnd)
             {
                 NCWnd* Target = Found->Wnd;
+#if NW_CUSTOM
+                if (NCustomAutoPotion::OnDropItem(Target, X, Y, Item))   // custom: onto the automatic potions window
+                {
+                    UnselectAll();
+                    Selected = -1;
+                    bDblClicked = 0;
+                    bDragging = 0;
+                    return 1;
+                }
+#endif
                 if (Target->IsA(NClass::NCEquipItemWnd()))
                 {
                     // onto the paperdoll: the item is used (put on); the slot under the mouse is asked and not used, as in the stock

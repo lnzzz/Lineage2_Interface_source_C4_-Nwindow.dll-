@@ -24,6 +24,9 @@
 #include "nwindow/NMacroEntry.h"
 #include "nwindow/NItemInfo.h"
 #include "nwindow/NClasses.gen.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomShortCuts.h"
+#endif
 
 // the dialog boxes of the shortcut items (NDialogInfo::ID; names ours, the console's UseShortCut has them too): an item
 // with a warning asks first, an item with a message of its own shows it
@@ -226,6 +229,10 @@ INT NCShortCutWnd::WindowProc(UINT Msg, WPARAM wParam, LPARAM lParam)
             return OnRotateClicked() != 0;
         if (wParam == (WPARAM)NID_SHORTCUT_PAD)
             return OnPadClicked() != 0;   // new in C2
+#if NW_CUSTOM
+        if (NCustomShortCuts::OnCommand(this, wParam))   // custom: the expand button
+            return 1;
+#endif
     }
     return 0;
 }
@@ -494,14 +501,22 @@ void NCShortCutWnd::PaintBar(NCGDevice* Device)
             else
                 PaintSlot(this, Device, First + i, 7, Pos, 1, 1);
         }
+#if NW_CUSTOM
+        UTexture* Key = NCustomShortCuts::KeyTexture(this, i);   // custom: NULL for a bar with another key set
+#else
+        UTexture* Key = KeyTex[i];
+#endif
         if (bHorizontal)
-            Device->DrawTexture(Pos - 1, 4, 0x10, 0x10, 0, 0, 0x10, 0x10, KeyTex[i], 0xFF, 1);
+            Device->DrawTexture(Pos - 1, 4, 0x10, 0x10, 0, 0, 0x10, 0x10, Key, 0xFF, 1);
         else
-            Device->DrawTexture(4, Pos - 1, 0x10, 0x10, 0, 0, 0x10, 0x10, KeyTex[i], 0xFF, 1);
+            Device->DrawTexture(4, Pos - 1, 0x10, 0x10, 0, 0, 0x10, 0x10, Key, 0xFF, 1);
         Pos += IconSize + 5;
         if (i == 3 || i == 7)
             Pos += 5;
     }
+#if NW_CUSTOM
+    NCustomShortCuts::PaintKeyLabels(this, Device);   // custom: the labels of the bar's key set
+#endif
 }
 NW_HOOK_METHOD(0x10106860, NCShortCutWnd, PaintBar)
 
@@ -767,6 +782,34 @@ static FORCEINLINE INT RegisterID(NShortCutItem* Item)
     return EID(Item);
 }
 
+#if NW_CUSTOM
+// custom: the stock "dropped on another slot of the bar" registration, for a drop on another bar: registered at Target,
+// deleted at Slot, and what was at Target registered at Slot
+static void MoveShortCut(NCShortCutWnd* Wnd, INT Slot, INT Target)
+{
+    NShortCutItem* Items = Wnd->Items;
+    L2ParamStack Params(10);
+    Params.PushBack((void*)(INT_PTR)EKind(&Items[Slot]));
+    Params.PushBack((void*)(INT_PTR)Target);
+    Params.PushBack((void*)(INT_PTR)RegisterID(&Items[Slot]));
+    Params.PushBack((void*)1);
+    GConsole->RequestShortCutReg(Params);
+    Params.Clear();
+    Params.PushBack((void*)(INT_PTR)Slot);
+    GConsole->RequestShortCutDel(Params);
+    Items[Slot].Clear();
+    if (EID(&Items[Target]) != 0)
+    {
+        Params.Clear();
+        Params.PushBack((void*)(INT_PTR)EKind(&Items[Target]));
+        Params.PushBack((void*)(INT_PTR)Slot);
+        Params.PushBack((void*)(INT_PTR)RegisterID(&Items[Target]));
+        Params.PushBack((void*)1);
+        GConsole->RequestShortCutReg(Params);
+    }
+}
+#endif
+
 // 0x10107df0 (vslot 63) - the release of a dragged slot: on the slot itself the item is used (after its warning or its
 // message), on another slot of the bar the shortcut goes there (what was there takes its place), on a line of the macro
 // editor the line gets "/<command> <page> <slot>" typed in, and more than 30 pixels off the bar the shortcut is deleted
@@ -827,6 +870,16 @@ INT NCShortCutWnd::OnLButtonUp(WPARAM wParam, LPARAM lParam)
                     }
                 }
             }
+#if NW_CUSTOM
+            // custom: dropped on another shortcut bar (an extra bar or the main one): moved there as on this bar
+            else if (FoundWnd && FoundWnd != this && FoundWnd->IsA(NCShortCutWnd::StaticClass()))
+            {
+                INT Target = ((NCShortCutWnd*)FoundWnd)->SlotAtPoint(X, Y);
+                if (Target >= 0 && Target != PressedSlot)
+                    MoveShortCut(this, PressedSlot, Target);
+                PressedSlot = -1;
+            }
+#endif
             else if (FoundWnd == this)
             {
                 // dropped on another slot of the bar: registered there, deleted here, and what was there registered here
@@ -889,6 +942,10 @@ NW_HOOK_METHOD(0x10107df0, NCShortCutWnd, OnLButtonUp)
 INT NCShortCutWnd::OnRButtonDown(WPARAM wParam, LPARAM lParam)
 {
     INT Slot = SlotAtPoint(LOWORD(lParam), HIWORD(lParam));
+#if NW_CUSTOM
+    if (Slot < 0 && bPadMode == 0 && NCustomShortCuts::OnRightClick(this))   // custom: outside the slots, the next key set
+        return 1;
+#endif
     if (Slot >= 0 && Items[Slot].bUsed && IsShotItem(EID(&Items[Slot])))
     {
         L2ParamStack Params(10);

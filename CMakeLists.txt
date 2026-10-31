@@ -114,15 +114,25 @@ set_target_properties(NWindowDecomp PROPERTIES
 # Configure with -G "Visual Studio 17 2022" -A Win32 (a plain `cmake -S . -B build` picks x64 and stops above).
 find_package(Python3 COMPONENTS Interpreter)
 file(GLOB NWD_STANDALONE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/standalone/*.cpp")
+# custom features (src/custom, NW_CUSTOM): the standalone build only; the hook target stays faithful
+option(NWD_CUSTOM "build src/custom into the standalone DLL (NW_CUSTOM=1)" ON)
+set(NWD_CUSTOM_SOURCES)
+if(NWD_CUSTOM AND NWD_GAME_SOURCES)
+  file(GLOB NWD_CUSTOM_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/custom/*.cpp")
+endif()
 add_library(nwd_standalone_objs OBJECT EXCLUDE_FROM_ALL
   ${NWD_GAME_SRC_FILES}
   ${NWD_STANDALONE_SOURCES}
+  ${NWD_CUSTOM_SOURCES}
   src/re/NwMemory.cpp      # global new/delete through GMalloc, as every UE2 module
   src/re/NwCrtCompat.cpp)  # printf of infinity/NaN like the VC7.0 CRT
 target_include_directories(nwd_standalone_objs PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_compile_definitions(nwd_standalone_objs PRIVATE ${NWD_DEFS} ${NWD_GAME_DEFS} NW_HOOK_MODE=0)
+if(NWD_CUSTOM_SOURCES)
+  target_compile_definitions(nwd_standalone_objs PRIVATE NW_CUSTOM=1)
+endif()
 # /Ob1: only functions marked inline (or defined in the class) are inlined. The stock build kept
 # small functions out of line that /Ob2 would fold into their callers (NString::AllocBuffer,
 # NStdString::Assign, NStlWString::Copy, NStlWordVector::PushBack, NHtmlItem::ParseEditType...),

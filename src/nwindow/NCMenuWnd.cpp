@@ -3,6 +3,9 @@
     0x10077f67, plus OnDestroy 0x100367a0 (the body NCActionWnd and NCServerSelectWnd share).
 =============================================================================*/
 #include "nwindow/NCMenuWnd.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomShortCuts.h"
+#endif
 #include "nwindow/NCConsole.h"
 #include "nwindow/NCButton.h"
 #include "nwindow/NCFrameCtrl.h"
@@ -42,6 +45,10 @@ INT NCMenuWnd::WindowProc(UINT Msg, WPARAM wParam, LPARAM lParam)
             NewVirtual77();
             return 1;
         }
+#if NW_CUSTOM
+        if (NCustomShortCuts::OnMenuCommand(wParam))   // custom: the bars' settings and the automatic potions
+            return 1;
+#endif
     }
     return 0;
 }
@@ -94,6 +101,9 @@ INT NCMenuWnd::OnCreate()
     SystemButton = CreateMenuIcon(this, TEXT("L2UI_ch3.MenuIcon.MenuButton4"),
                                   TEXT("L2UI_ch3.MenuIcon.MenuButton4_down"), NID_MENU_SYSTEM, 130, 0xC1);
     CharacterButton->bClickSound = 0;
+#if NW_CUSTOM
+    NCustomShortCuts::CreateMenuIcons(this);   // custom: two more icons (NCConsole::OnCreate makes the bar wider)
+#endif
     return 1;
 }
 NW_HOOK_METHOD(0x100b7de0, NCMenuWnd, OnCreate)
@@ -103,6 +113,9 @@ NW_HOOK_METHOD(0x100b7de0, NCMenuWnd, OnCreate)
 INT NCMenuWnd::OnDestroy()
 {
     guard(NCMenuWnd::OnDestroy);
+#if NW_CUSTOM
+    NCustomShortCuts::DestroyMenuIcons(this);
+#endif
     if (SystemButton)
     {
         RemoveChildWindow(SystemButton->Entry);
@@ -142,6 +155,9 @@ INT NCMenuWnd::OnPaint(NCGDevice* Device)
     Device->DrawTexture(12, 0, 16, 46, 0, 0, 16, 46, BackLeftTex);
     Device->DrawTexture(28, 0, (INT)(Width - 12.0f - 32.0f), 46, 0, 0, 16, 46, BackTex);
     Device->DrawTexture((INT)(Width - 16.0f), 0, 16, 46, 0, 0, 16, 46, BackRightTex);
+#if NW_CUSTOM
+    NCustomShortCuts::PaintMenuIcons(this, Device);   // custom: the frame of the potion icon
+#endif
     Device->EndPaint();
     Device->ReleaseClip();
     return 1;

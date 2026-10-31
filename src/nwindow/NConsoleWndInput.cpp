@@ -19,6 +19,9 @@
 #include "nwindow/NCPawnSelectWnd.h"
 #include "nwindow/NCPetitionWnd.h"
 #include "nwindow/NCShortCutWnd.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomShortCuts.h"
+#endif
 #include "nwindow/NCStatusWnd.h"
 #include "nwindow/NCVirtualWndMain.h"
 #include "nwindow/NConsoleWndExt.h"
@@ -365,6 +368,10 @@ void NConsoleWnd::Tick(FLOAT InDeltaTime)
     }
     if (Desktop && GetDesktop()->ShortCutWnd)
         GetDesktop()->ShortCutWnd->Tick(InDeltaTime);
+#if NW_CUSTOM
+    if (Desktop)
+        NCustomShortCuts::Tick();   // custom: the extra bars follow the main bar
+#endif
     if (CreditWnd && CreditWnd->IsShowWindow())
         static_cast<NCCreditWnd*>(CreditWnd)->Tick(InDeltaTime);   // NCCreditWnd's scroll
     if (Wnd3C08 && Wnd3C08->IsShowWindow())
@@ -654,6 +661,10 @@ UBOOL NConsoleWnd::HookShortCutKey(UINT Msg, WPARAM wParam, LPARAM lParam)
         else if (Flags == 0xC044)
             Msg = WM_KEYUP;
     }
+#if NW_CUSTOM
+    if (NCustomShortCuts::OnKey(Msg, wParam, lParam))   // custom: 1 .. = to the first extra bar (Enter to chat mode)
+        return 1;
+#endif
     switch (Msg)
     {
     case WM_KEYUP:

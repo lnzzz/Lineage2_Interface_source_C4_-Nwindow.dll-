@@ -38,6 +38,9 @@
 #include "nwindow/NCRadarWnd.h"
 #include "nwindow/NCShopWnd.h"
 #include "nwindow/NCShortCutWnd.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomShortCuts.h"
+#endif
 #include "nwindow/NCSiegeInfoMainWnd.h"
 #include "nwindow/NCStatusWnd.h"
 #include "nwindow/NCStoreWnd.h"
@@ -647,7 +650,13 @@ INT NCConsole::OnCreate()
     // class 0x102e73c8
     W = new NCMenuWnd;
     nw::Field<NCWnd*>(this, 0x144) = W;   // MenuWnd
+#if NW_CUSTOM
+    // custom: wider for the two icons NCustomShortCuts::CreateMenuIcons adds
+    W->SetPosition((INT)((Width - 173.0f - NCustomShortCuts::MenuIcons * NCustomShortCuts::MenuIconStep)), (INT)((Height - 46.0f)),
+                   0xAD + NCustomShortCuts::MenuIcons * NCustomShortCuts::MenuIconStep, 0x2E, 1, 1, 4);
+#else
     W->SetPosition((INT)((Width - 173.0f)), (INT)((Height - 46.0f)), 0xAD, 0x2E, 1, 1, 4);
+#endif
     E = AddChildWindow(nw::Field<NCWnd*>(this, 0x144), 0x85002);
     nw::Field<NCWnd*>(this, 0x144)->AttachEntry(E);
     nw::Field<NCWnd*>(this, 0x144)->Unknown78 = ++GNextWndNumber;
@@ -1291,6 +1300,9 @@ INT NCConsole::OnCreate()
     nw::Field<UTexture*>(this, 0x274) = FindTexture(TEXT("NWindow.BlackTexture"), 1);
     nw::Field<UTexture*>(this, 0x278) = FindTexture(TEXT("NWindow.chat"), 1);
     nw::Field<INT>(this, 0x288) = SetTimer(0xFA0D05, 1000, NULL);
+#if NW_CUSTOM
+    NCustomShortCuts::Create(this);   // custom: the extra shortcut bars
+#endif
     return 1;
 }
 NW_HOOK_METHOD(0x10060240, NCConsole, OnCreate)
@@ -1317,6 +1329,9 @@ INT NCConsole::OnDestroy()
         if (Balloons(i).Text)
             delete[] Balloons(i).Text;
     Balloons.Empty();
+#if NW_CUSTOM
+    NCustomShortCuts::Destroy(this);   // custom: the extra shortcut bars, before the main bar
+#endif
     DESTROY_AT(0xf4); DESTROY_AT(0xf8); DESTROY_AT(0xfc); DESTROY_AT(0x100); DESTROY_AT(0x10c); DESTROY_AT(0x174); DESTROY_AT(0x150); DESTROY_AT(0x158);
     DESTROY_AT(0x154); DESTROY_AT(0x15c); DESTROY_AT(0x120); DESTROY_AT(0x124); DESTROY_AT(0x128); DESTROY_AT(0x12c); DESTROY_AT(0x130); DESTROY_AT(0x134);
     DESTROY_AT(0x138); DESTROY_AT(0x140); DESTROY_AT(0x144); DESTROY_AT(0x148); DESTROY_AT(0x14c); DESTROY_AT(0x240); DESTROY_AT(0x244); DESTROY_AT(0x160);

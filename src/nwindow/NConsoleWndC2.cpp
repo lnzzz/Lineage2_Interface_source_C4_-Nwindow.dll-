@@ -247,9 +247,15 @@ extern INT GGameGuardRunning;                           // src/standalone/NwGame
 // sends it (NetHandler 75), 4 asks for the login (NetHandler 74). Without the answer to 3 the login stops after the Init: the
 // C4 login server waits for AuthGameGuard (packet 7) before RequestAuthLogin. The servers this client plays on check only the
 // session id the engine puts in that packet (Lucera's AuthGameGuard; its game server ignores ReplyGameGuardQuery)
-static void AnswerGameGuardQuery(NConsoleWnd* Console, INT Kind)
+static void AnswerGameGuardQuery(NConsoleWnd* Console, INT Kind, const DWORD* Query)
 {
+#if NW_CUSTOM
+    // custom: the query itself as the answer (what the L2 Ignition client patch did with the stock DLL: with zeros the
+    // game server refused the session key on the January 2006 engine)
+    const DWORD Answer[4] = { Query[0], Query[1], Query[2], Query[3] };
+#else
     const DWORD Answer[4] = { 0, 0, 0, 0 };
+#endif
     UL2NetHandler* Net = Console->Engine->NetHandler;
     if (Kind == 0)
     {
@@ -278,7 +284,8 @@ __declspec(safebuffers) void NConsoleWnd::GameGuardQueryX(INT P1, INT P2, INT P3
     else
     {
         GGameGuardQueryExtra = P5;
-        AnswerGameGuardQuery(this, P5);
+        const DWORD Query[4] = { (DWORD)P1, (DWORD)P2, (DWORD)P3, (DWORD)P4 };
+        AnswerGameGuardQuery(this, P5, Query);
     }
 #endif
 }
