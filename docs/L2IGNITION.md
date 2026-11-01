@@ -16,6 +16,8 @@ build standalone; el build hook sigue siendo fiel al original.
 - **Autopociones** (`src/custom/NCustomAutoPotion.cpp`, Alt+A o el ícono del menú): HP, MP y CP; la poción se arrastra
   desde el inventario, cada fila tiene Auto, porcentaje y tiempo mínimo entre usos.
 - **Menú inferior**: dos íconos más (barras y autopociones).
+- **Ventana de buffs** (`src/nwindow/NCAbnormalStatusWnd.cpp`): hasta 40 íconos en 4 filas de 10 (la original guarda 31
+  y dibuja 30). La lista secundaria y el ícono extra van en la fila siguiente. El server manda 40 con `BuffIconRows = 4`.
 - **GameGuard del login**: la respuesta automática devuelve la misma consulta en vez de ceros (como el parche que el
   cliente usaba con la DLL original).
 

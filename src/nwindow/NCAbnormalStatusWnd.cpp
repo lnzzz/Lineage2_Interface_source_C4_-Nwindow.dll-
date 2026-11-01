@@ -18,6 +18,18 @@
 // title bar id
 enum { NID_ABNORMALSTATUS_FRAME = 0xFFA0B3 };
 
+#if NW_CUSTOM
+// L2 Ignition: the first list holds up to 40 icons (four rows of ten; the stock keeps 31 and draws 30), since the
+// server allows 24 buffs + 10 debuffs + toggles. The second list and the extra icon go in the row after the first's last.
+enum { CUSTOM_MAX_STATUS = 40 };
+
+// the rows the first list takes (0 when empty)
+static FORCEINLINE INT CustomRows(INT Count)
+{
+    return (Count + 9) / 10;
+}
+#endif
+
 // 0x10116530 - the lists are empty (their arrays by the members' constructors), the timers and the textures none; the
 // hover index is -1. The extra icon's pointer and the fade timer are left as allocated.
 NCAbnormalStatusWnd::NCAbnormalStatusWnd(INT InIconSize)
@@ -271,16 +283,24 @@ INT NCAbnormalStatusWnd::OnPaint(NCGDevice* Device)
         NAbnormalEntry* E = Statuses(i);
         if (!E || !E->Icon)
             continue;
+#if NW_CUSTOM
+        if (i < CUSTOM_MAX_STATUS)
+            DrawListIcon(Device, BackTex, DebuffTex, E, (i % 10) * 26 + 12, (i / 10) * 25);
+#else
         if (i < 10)
             DrawListIcon(Device, BackTex, DebuffTex, E, i * 26 + 12, 0);
         else if (i < 20)
             DrawListIcon(Device, BackTex, DebuffTex, E, i * 26 - 248, 25);
         else if (i < 30)
             DrawListIcon(Device, BackTex, DebuffTex, E, i * 26 - 508, 50);
+#endif
     }
     if (ExtraStatus)
     {
         INT Count = Statuses.Num();
+#if NW_CUSTOM
+        DrawExtraIcon(Device, BackTex, ExtraStatus, CustomRows(Count) * 25);
+#else
         if (Count == 0)
             DrawExtraIcon(Device, BackTex, ExtraStatus, 0);
         else if (Count <= 10)
@@ -289,6 +309,7 @@ INT NCAbnormalStatusWnd::OnPaint(NCGDevice* Device)
             DrawExtraIcon(Device, BackTex, ExtraStatus, 50);
         else if (Count <= 30)
             DrawExtraIcon(Device, BackTex, ExtraStatus, 75);
+#endif
         ExtraStatus->IconX = 13;
         if (ExtraStatus->bVisible)
             Device->DrawStretchedTex(ExtraStatus->IconX, ExtraStatus->IconY, 24, 24, ExtraStatus->Icon, 1,
@@ -309,6 +330,9 @@ INT NCAbnormalStatusWnd::OnPaint(NCGDevice* Device)
             continue;
         INT Count = Statuses.Num();
         INT BackX = i * 26 + (ExtraStatus ? 38 : 12);
+#if NW_CUSTOM
+        DrawSecondIcon(Device, BackTex, E, BackX, CustomRows(Count) * 25);
+#else
         if (Count == 0)
             DrawSecondIcon(Device, BackTex, E, BackX, 0);
         else if (Count <= 10)
@@ -317,6 +341,7 @@ INT NCAbnormalStatusWnd::OnPaint(NCGDevice* Device)
             DrawSecondIcon(Device, BackTex, E, BackX, 50);
         else if (Count <= 30)
             DrawSecondIcon(Device, BackTex, E, BackX, 75);
+#endif
     }
     Device->EndPaint();
     Device->ReleaseClip();
@@ -333,6 +358,9 @@ static NAbnormalEntry* GridEntry(NCAbnormalStatusWnd* Wnd, INT Index)
     INT Count = Wnd->Statuses.Num();
     INT Count2 = Wnd->Statuses2.Num();
     INT Rows;
+#if NW_CUSTOM
+    Rows = CustomRows(Count) * 10;
+#else
     if (Count == 0)
         Rows = 0;
     else if (Count <= 10)
@@ -341,6 +369,7 @@ static NAbnormalEntry* GridEntry(NCAbnormalStatusWnd* Wnd, INT Index)
         Rows = 20;
     else
         Rows = 30;
+#endif
     if (Index < Rows)
         return Index < Count ? Wnd->Statuses(Index) : NULL;
     INT Slot = Index - Rows;
@@ -361,8 +390,13 @@ INT NCAbnormalStatusWnd::OnDrawToolTip(NCGDevice* Device)
     Device->BeginPaint(ScreenX, ScreenY);
     Device->SetClip(ScreenX, ScreenY, (INT)Width, (INT)Height);
     IconSize = 26;
+#if NW_CUSTOM
+    if (HoverIndex < 0 || HoverIndex >= CUSTOM_MAX_STATUS + 10)
+        return 1;
+#else
     if (HoverIndex < 0 || HoverIndex > 40)
         return 1;
+#endif
     NAbnormalEntry* E = GridEntry(this, HoverIndex);
     if (E && E->bVisible)
     {
@@ -431,6 +465,16 @@ void NCAbnormalStatusWnd::UpdateLayout()
         FrameCtrl->SetFrameSize(12, 76);
         return;
     }
+#if NW_CUSTOM
+    // more than 30: four rows, and a fifth for the second list / the extra icon
+    if (Count > 30)
+    {
+        INT H = (ExtraStatus || Count2 > 0) ? 126 : 101;
+        SetWindowSize(272.0f, (FLOAT)H);
+        FrameCtrl->SetFrameSize(12, H);
+        return;
+    }
+#endif
     SetWindowSize(272.0f, 101.0f);
     FrameCtrl->SetFrameSize(12, 101);
 }
@@ -453,8 +497,13 @@ INT NCAbnormalStatusWnd::HitTest(INT X, INT Y)
 {
     INT RX = X + (-12 - ScreenX);
     INT RY = Y - ScreenY;
+#if NW_CUSTOM
+    if (RX < 0 || RX > (IconSize * 5 + 5) * 2 || RY < 0 || RY > IconSize * 5 + 5)
+        return -1;
+#else
     if (RX < 0 || RX > (IconSize * 5 + 5) * 2 || RY < 0 || RY > IconSize * 4 + 4)
         return -1;
+#endif
     return RX / (IconSize + 1) + RY / (IconSize + 1) * 10;
 }
 NW_HOOK_METHOD(0x1010d1c0, NCAbnormalStatusWnd, HitTest)
@@ -498,8 +547,13 @@ static FORCEINLINE void FillEnchantName(NAbnormalEntry* Entry)
 // 0 when the window holds 31 already
 INT NCAbnormalStatusWnd::AddStatus(FAbnormalStatus* Status)
 {
+#if NW_CUSTOM
+    if (Statuses.Num() >= CUSTOM_MAX_STATUS)
+        return 0;
+#else
     if (Statuses.Num() > 30)
         return 0;
+#endif
     if (!GL2ReplayMode)
     {
         if (!IsShowWindow())
