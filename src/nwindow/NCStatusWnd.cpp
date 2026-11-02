@@ -66,17 +66,20 @@ NW_HOOK_METHOD(0x10001630, NCButtonTexturesView, SetTextures)
 
 // 0x1002c760 (an anonymous method of the name label, class data 0x102C4EE8; name ours; ret 0x10) - the text and its color: the
 // label keeps the text in a string at +0x1FC and lays it out in its tool tip record at +0x220 (0x400 wide; the stock
-// 0x10032460 clears the record, sets the text and the width and lays it out), and two flags
+// 0x10032460 clears the record, sets the text and the width and lays it out), the painter (Kind, +0x1F4), the alignment
+// (+0x1F8) and the color (+0x21C), as NCNameCtrl.h has them. L2 Ignition: the color went to +0x1F8 and the alignment to
+// +0x21C, so the painter met neither alignment and drew no name (the stock stores the third argument at +0x1F8 and the
+// fourth at +0x21C)
 struct NCNameCtrlView : public NCWnd
 {
     __declspec(noinline) void SetText(const TCHAR* Text, INT FlagA, INT FlagB, DWORD Color)   // out of line as the stock's: the paints call it
     {
-        ::nw::Field<DWORD>(this, 0x1F8) = Color;
+        ::nw::Field<INT>(this, 0x1F8) = FlagB;
         FString& Str = ::nw::Field<FString>(this, 0x1FC);
         ::nw::Field<INT>(this, 0x1F4) = FlagA;
         Str = Text;
         ((NToolTipInfo*)((BYTE*)this + 0x220))->SetText(*Str, 0x400);   // 0x10032460
-        ::nw::Field<INT>(this, 0x21C) = FlagB;
+        ::nw::Field<DWORD>(this, 0x21C) = Color;
     }
 };
 NW_HOOK_METHOD(0x1002c760, NCNameCtrlView, SetText)

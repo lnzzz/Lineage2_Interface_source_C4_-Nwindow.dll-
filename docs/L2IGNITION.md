@@ -23,6 +23,15 @@ build standalone; el build hook sigue siendo fiel al original.
 
 La configuración queda en `system\NWindowCustom.ini` (`[ShortCut]` y `[AutoPotion]`).
 
+## Correcciones de la reconstrucción
+
+Valen para los dos builds (no dependen de `NW_CUSTOM`):
+
+- **Nombres de las ventanas de estado** (`NCNameCtrlView::SetText` en `src/nwindow/NCStatusWnd.cpp`): guardaba el color
+  donde el control lee la alineación (+0x1F8) y la alineación donde lee el color (+0x21C), así que no se veía el nombre
+  propio, ni el del target, la mascota o el summon. La DLL original guarda el tercer argumento en +0x1F8 y el cuarto en
+  +0x21C.
+
 ## Compilar
 
 Visual Studio 2022 o 2026 con x86 C++, CMake (el que trae Visual Studio sirve) y Python 3 con `pefile`. Copiar a `orig/`
