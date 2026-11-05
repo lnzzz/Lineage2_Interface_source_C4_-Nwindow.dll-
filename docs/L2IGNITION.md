@@ -37,7 +37,11 @@ build standalone; el build hook sigue siendo fiel al original.
     que el fondo traslúcido de la ventana queda detrás; el tamaño del `UViewport` (+0x94 / +0x98) es el de la caja
     mientras tanto, porque el nodo saca de ahí la proyección.
   - El borde de arriba de los paneles sale de la parte derecha de esa fila del fondo original: en el resto están los
-    huecos transparentes de las pestañas originales.
+    huecos transparentes de las pestañas originales. La esquina de arriba a la derecha original está cortada en diagonal
+    contra el marco de la ventana: se arma con pedazos rectos (el canvas no dibuja partes espejadas, con ancho negativo).
+  - La caja del modelo tiene la línea gris de 1 px de las casillas, a la par de la primera y la última casilla de cada
+    columna. Los dibujos de las casillas vacías van 1 px más abajo que en el fondo original, para que el marco de un ítem
+    equipado caiga justo sobre su borde.
 - **GameGuard del login**: la respuesta automática devuelve la misma consulta en vez de ceros (como el parche que el
   cliente usaba con la DLL original).
 
