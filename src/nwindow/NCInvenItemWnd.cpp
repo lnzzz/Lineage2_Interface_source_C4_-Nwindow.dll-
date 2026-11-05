@@ -7,6 +7,7 @@
 #include "nwindow/NCInvenItemWnd.h"
 #if NW_CUSTOM
 #include "nwindow/NCustomAutoPotion.h"
+#include "nwindow/NCustomInventory.h"
 #endif
 #include "nwindow/NCButton.h"
 #include "nwindow/NCConsole.h"
@@ -47,6 +48,16 @@ enum
     MSG_Drop = 400,             // "Discard $s1. Do you wish to continue?"
     MSG_Place = 651,            // "Place $s1 in the current location and direction..."
 };
+
+// how many of the page's items show: custom, a type filter shows only the matching ones (they come first)
+static FORCEINLINE INT ShownItems(NCItemWnd* Page)
+{
+#if NW_CUSTOM
+    return NCustomInventory::Shown(Page);
+#else
+    return Page->Items.Num();
+#endif
+}
 
 static FORCEINLINE NCDialogBox* MainDialogBox()
 {
@@ -146,7 +157,7 @@ INT NCInvenItemWnd::OnRButtonDown(WPARAM wParam, LPARAM lParam)
 {
     INT Index = HitTest(LOWORD(lParam), HIWORD(lParam), 1, 1);
     Selected = Index;
-    if (Index >= 0 && Index < Items.Num())
+    if (Index >= 0 && Index < ShownItems(this))
     {
         UseItem(this, Items(Index));
         ClearShortCutSelections();
@@ -162,7 +173,7 @@ INT NCInvenItemWnd::OnLButtonDown(WPARAM wParam, LPARAM lParam)
     INT Index = HitTest(LOWORD(lParam), HIWORD(lParam), 1, 1);
     HoverIndex = Index;
     Selected = Index;
-    if (Index >= 0 && Index < Items.Num())
+    if (Index >= 0 && Index < ShownItems(this))
     {
         UnselectAll();
         Items(Selected)->Select();
@@ -185,7 +196,7 @@ INT NCInvenItemWnd::OnLButtonDblClick(WPARAM wParam, LPARAM lParam)
     bDragging = 0;
     INT Index = HitTest(LOWORD(lParam), HIWORD(lParam), 1, 1);
     Selected = Index;
-    if (Index >= 0 && Index < Items.Num())
+    if (Index >= 0 && Index < ShownItems(this))
         UseItem(this, Items(Index));
     bDblClicked = 1;
     UnselectAll();
@@ -235,12 +246,16 @@ NW_HOOK_METHOD(0x100951e0, NCInvenItemWnd, GetAdena)
 INT NCInvenItemWnd::OnPaint(NCGDevice* Device)
 {
     guard(NCItemWnd::OnPaint);
+#if NW_CUSTOM
+    NCustomInventory::Arrange(this);   // custom: the items of the type filter first
+#endif
     Device->SetClip(ScreenX - 1, ScreenY - 1, (INT)(Width + 2.0f), (INT)(Height + 3.0f));
     Device->BeginPaint(ScreenX, ScreenY);
     INT X = 1;
     INT Y = 1;
     INT First = TopRow * Columns;
-    for (INT Index = First; Index < Items.Num(); Index++)
+    INT Shown = ShownItems(this);
+    for (INT Index = First; Index < Shown; Index++)
     {
         NItemEntry* Item = Items(Index);
         if (!Item)
@@ -279,6 +294,8 @@ INT NCInvenItemWnd::OnMouseMove(WPARAM wParam, LPARAM lParam)
     INT X = LOWORD(lParam);
     INT Y = HIWORD(lParam);
     HoverIndex = HitTest(X, Y, 1, 1);
+    if (HoverIndex >= ShownItems(this))
+        HoverIndex = -1;   // (custom: an item the type filter hides has no tool tip; the stock page shows them all)
     if (IsFocused())
     {
         if (bDragging && Selected >= 0 && Selected < Items.Num())
@@ -369,6 +386,9 @@ INT NCInvenItemWnd::OnLButtonUp(WPARAM wParam, LPARAM lParam)
         {
             INT Target = HitTest(X, Y, 1, 1);
             INT Current = Selected;
+            INT Shown = ShownItems(this);
+            if (Shown < Items.Num() && Target >= Shown)
+                Target = Shown - 1;   // custom: past the items the type filter shows, the last of them
             if (Target != Current && Target >= 0 && Current >= 0 && Current < Items.Num())
             {
                 if (Target >= Items.Num())

@@ -18,6 +18,26 @@ build standalone; el build hook sigue siendo fiel al original.
 - **Menú inferior**: dos íconos más (barras y autopociones).
 - **Ventana de buffs** (`src/nwindow/NCAbnormalStatusWnd.cpp`): hasta 40 íconos en 4 filas de 10 (la original guarda 31
   y dibuja 30). La lista secundaria y el ícono extra van en la fila siguiente. El server manda 40 con `BuffIconRows = 4`.
+- **Inventario ancho** (`src/custom/NCustomInventory.cpp`): 640 x 372 en lugar de 256 x 401. A la izquierda el
+  paperdoll: armadura y capa en una columna, joyas en la otra, arma y escudo abajo, el **modelo 3D del personaje** en el
+  medio y los tatuajes debajo (las casillas vacías son los dibujos del fondo original, recortados). A la derecha, pestañas
+  (Todo, Armas, Armaduras, Joyas, Consumibles, Materiales, Otros, Quest) sobre una grilla de 10 x 7, y abajo "Ordenar", la
+  cantidad de ítems y la caja original de adena y peso con la basura y el cristalizar. Las pestañas de tipo ponen primero
+  los ítems que coinciden y muestran solo esos; "Todo" devuelve el orden que había. "Ordenar" ordena la pestaña visible por
+  tipo, grado, parte del cuerpo e ítem, y el orden queda en el archivo de `..\iwo`. Qué etc items son consumibles o
+  materiales lo dice `system\NWindowItems.txt` (`<id> <C|M>` por línea), que arma el build del cliente del server. Las
+  pestañas originales siguen existiendo (cambian de página) pero fuera de la vista. Una posición guardada para la ventana
+  angosta que la deje fuera de la pantalla se corrige al abrirla.
+  - El modelo: `FActorSceneNode` de Engine.dll (lo que usa `UCanvas::DrawActor`, que en este cliente no sirve: deja el
+    `DrawScale` del pawn cambiado y pone la cámara en un lugar que no muestra nada) con una cámara propia en el origen
+    mirando a +X, el pawn movido delante de ella durante la llamada (posición y rotación vuelven después). Antes de
+    dibujar se vacía el lote de tiles 2D del canvas (`FCanvasUtil::Flush`, `UCanvas` +0xA8, como hace el `DrawActor` no
+    virtual del motor): si no, el fondo de la ventana se dibuja después y tapa el modelo. Después el viewport del render
+    interface pasa a ser la caja del modelo (`SetViewport`, +0x0C) y se limpia solo la profundidad (`Clear`, +0x10), así
+    que el fondo traslúcido de la ventana queda detrás; el tamaño del `UViewport` (+0x94 / +0x98) es el de la caja
+    mientras tanto, porque el nodo saca de ahí la proyección.
+  - El borde de arriba de los paneles sale de la parte derecha de esa fila del fondo original: en el resto están los
+    huecos transparentes de las pestañas originales.
 - **GameGuard del login**: la respuesta automática devuelve la misma consulta en vez de ceros (como el parche que el
   cliente usaba con la DLL original).
 

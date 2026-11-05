@@ -19,6 +19,9 @@
 #include "nwindow/NDropDialogInfo.h"
 #include "nwindow/NHennaData.h"
 #include "nwindow/NItemC4.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomInventory.h"
+#endif
 #if NW_FEATURES
 // phase 6: ItemHoverTip (not in NWindow_C1: the hover tip of the item grids in the recent style)
 #include "features/ItemHoverTip.h"
@@ -228,6 +231,30 @@ INT NCEquipItemWnd::GetEquipSlot(INT BodyPart, INT ObjectID)
 NW_HOOK_METHOD(0x10093cd0, NCEquipItemWnd, GetEquipSlot)
 
 
+// the place of a slot's icon (0 .. 14): the stock 5 x 3 grid, or (custom) the wide inventory's two columns
+static const INT GStockSlotX[5] = { 0x07, 0x2E, 0x55, 0x82, 0xA9 };
+static const INT GStockSlotY[3] = { 0x07, 0x2D, 0x53 };
+static FORCEINLINE void SlotXY(INT Slot, INT& X, INT& Y)
+{
+#if NW_CUSTOM
+    NCustomInventory::SlotPos(Slot, X, Y);
+#else
+    X = GStockSlotX[Slot % 5];
+    Y = GStockSlotY[Slot / 5];
+#endif
+}
+
+// the place of a tattoo's 26 x 26 box: the stock column (x 215, 27 apart from y 8), or (custom) a row under the model
+static FORCEINLINE void HennaXY(INT Index, INT& X, INT& Y)
+{
+#if NW_CUSTOM
+    NCustomInventory::HennaPos(Index, X, Y);
+#else
+    X = 0xD7;
+    Y = Index * 0x1B + 8;
+#endif
+}
+
 // the frame of a selected item, or the two of the others, at (X, Y) of 34 / 35 pixels (the paperdoll's frames)
 static FORCEINLINE void DrawSlotFrame(NCGDevice* Device, NCEquipItemWnd* Wnd, NItemEntry* Item, INT X, INT Y)
 {
@@ -250,6 +277,9 @@ INT NCEquipItemWnd::OnPaint(NCGDevice* Device)
     guard(NCEquipItemWnd::OnPaint);
     Device->SetClip(ScreenX - 1, ScreenY - 1, (INT)(Width + 2.0f), (INT)(Height + 2.0f));
     Device->BeginPaint(ScreenX, ScreenY);
+#if NW_CUSTOM
+    NCustomInventory::PaintEmptySlots(this, Device);   // custom: the stock back has them on the stock places
+#endif
     INT X = 0;
     INT Y = 0;
     for (INT i = 0; i < Items.Num(); i++)
@@ -262,21 +292,10 @@ INT NCEquipItemWnd::OnPaint(NCGDevice* Device)
         UBOOL bTwoSlot = 0;
         switch (Slot)
         {
-        case 0: X = 0x07; Y = 0x07; break;
-        case 1: X = 0x2E; Y = 0x07; break;
-        case 2: X = 0x55; Y = 0x07; break;
-        case 3: X = 0x82; Y = 0x07; break;
-        case 4: X = 0xA9; Y = 0x07; break;
-        case 5: X = 0x07; Y = 0x2D; break;
-        case 6: X = 0x2E; Y = 0x2D; break;
-        case 7: X = 0x55; Y = 0x2D; break;
-        case 8: X = 0x82; Y = 0x2D; break;
-        case 9: X = 0xA9; Y = 0x2D; break;
-        case 10: X = 0x07; Y = 0x53; break;
-        case 11: X = 0x2E; Y = 0x53; break;
-        case 12: X = 0x55; Y = 0x53; break;
-        case 13: X = 0x82; Y = 0x53; break;
-        case 14: X = 0xA9; Y = 0x53; break;
+        case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
+        case 8: case 9: case 10: case 11: case 12: case 13: case 14:
+            SlotXY(Slot, X, Y);
+            break;
         case 15:
         case 16:
         case 17:
@@ -287,8 +306,7 @@ INT NCEquipItemWnd::OnPaint(NCGDevice* Device)
         }
         if ((E->UnknownC30 == 6 || E->UnknownC30 == 10) && bHasUnknown1C98)
         {
-            X = 7;
-            Y = 0x2D;
+            SlotXY(5, X, Y);
             bTwoSlot = 0;
         }
         if (!bTwoSlot)
@@ -321,30 +339,37 @@ INT NCEquipItemWnd::OnPaint(NCGDevice* Device)
             Icon4 = Icon3 = Icon2;
         else if (!Icon4)
             Icon4 = Icon3;
+        INT X5, Y5, X6, Y6, X7, Y7, X10, Y10, X11, Y11, X12, Y12;
+        SlotXY(5, X5, Y5);
+        SlotXY(6, X6, Y6);
+        SlotXY(7, X7, Y7);
+        SlotXY(10, X10, Y10);
+        SlotXY(11, X11, Y11);
+        SlotXY(12, X12, Y12);
         if (Slot == 16)
         {
-            Device->DrawTexture(7, 0x2D, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon1, 0xFF, 1);
-            Device->DrawTexture(0x55, 0x2D, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon2, 0xFF, 1);
-            Device->DrawTexture(0x55, 0x2D, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
-            DrawSlotFrame(Device, this, Item, 6, 0x2C);
+            Device->DrawTexture(X5, Y5, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon1, 0xFF, 1);
+            Device->DrawTexture(X7, Y7, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon2, 0xFF, 1);
+            Device->DrawTexture(X7, Y7, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
+            DrawSlotFrame(Device, this, Item, X5 - 1, Y5 - 1);
         }
         else if (Slot == 15)
         {
-            Device->DrawTexture(0x2E, 0x2D, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon1, 0xFF, 1);
-            Device->DrawTexture(0x2E, 0x53, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon2, 0xFF, 1);
-            Device->DrawTexture(0x2E, 0x53, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
-            DrawSlotFrame(Device, this, Item, 0x2D, 0x2C);
+            Device->DrawTexture(X6, Y6, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon1, 0xFF, 1);
+            Device->DrawTexture(X11, Y11, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon2, 0xFF, 1);
+            Device->DrawTexture(X11, Y11, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
+            DrawSlotFrame(Device, this, Item, X6 - 1, Y6 - 1);
         }
         else if (Slot == 17)
         {
-            Device->DrawTexture(0x2E, 0x2D, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon1, 0xFF, 1);
-            Device->DrawTexture(0x2E, 0x53, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon2, 0xFF, 1);
-            Device->DrawTexture(0x2E, 0x53, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
-            Device->DrawTexture(7, 0x53, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon3, 0xFF, 1);
-            Device->DrawTexture(7, 0x53, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
-            Device->DrawTexture(0x55, 0x53, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon4, 0xFF, 1);
-            Device->DrawTexture(0x55, 0x53, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
-            DrawSlotFrame(Device, this, Item, 0x2D, 0x2C);
+            Device->DrawTexture(X6, Y6, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon1, 0xFF, 1);
+            Device->DrawTexture(X11, Y11, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon2, 0xFF, 1);
+            Device->DrawTexture(X11, Y11, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
+            Device->DrawTexture(X10, Y10, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon3, 0xFF, 1);
+            Device->DrawTexture(X10, Y10, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
+            Device->DrawTexture(X12, Y12, CellSize, CellSize, 0, 0, CellSize, CellSize, Icon4, 0xFF, 1);
+            Device->DrawTexture(X12, Y12, CellSize, CellSize, 0, 0, CellSize, CellSize, DualCapTex, 0xFF, 1);
+            DrawSlotFrame(Device, this, Item, X6 - 1, Y6 - 1);
         }
     }
     if (HennaBackTex)
@@ -352,13 +377,14 @@ INT NCEquipItemWnd::OnPaint(NCGDevice* Device)
         INT Count = GConsole->GetHennaSlotCount();
         for (INT i = 0; i < Count; i++)
         {
-            INT Row = i * 0x1B;
-            Device->DrawTexture(0xD7, Row + 8, 0x1A, 0x1A, 0, 0, 0x1A, 0x1A, HennaBackTex, 0xFF, 1);
+            INT HX, HY;
+            HennaXY(i, HX, HY);
+            Device->DrawTexture(HX, HY, 0x1A, 0x1A, 0, 0, 0x1A, 0x1A, HennaBackTex, 0xFF, 1);
             if (i < Hennas.Num() && AsC4((NItemEntry*)Hennas(i))->Icon[0])
             {
-                Device->DrawStretchedTex(0xD8, Row + 9, 0x18, 0x18, AsC4((NItemEntry*)Hennas(i))->Icon[0], 1, 0xFF);
+                Device->DrawStretchedTex(HX + 1, HY + 1, 0x18, 0x18, AsC4((NItemEntry*)Hennas(i))->Icon[0], 1, 0xFF);
                 if (!AsC4((NItemEntry*)Hennas(i))->UnknownC34)
-                    Device->DrawTexture(0xD9, Row + 9, 0x18, 0x18, 0, 0, 0x18, 0x18,
+                    Device->DrawTexture(HX + 2, HY + 1, 0x18, 0x18, 0, 0, 0x18, 0x18,
                                         FindTexture(TEXT("NWindow.ChatBack")), 0xFF, 1);
             }
         }
@@ -378,6 +404,12 @@ INT NCEquipItemWnd::OnDrawToolTip(NCGDevice* Device)
 {
     Device->BeginPaint(ScreenX, ScreenY);
     Device->SetClip(ScreenX, ScreenY, (INT)Width, (INT)Height);
+#if NW_CUSTOM
+    INT X = 0, Y = 0;
+    if (HoverSlot >= 0 && HoverSlot < 15)
+        SlotXY(HoverSlot, X, Y);
+    Y += 4;
+#else
     INT Row = HoverSlot / 5;
     INT Col = HoverSlot % 5;
     INT Y = (CellSize + 6) * Row + 0xB;
@@ -388,6 +420,7 @@ INT NCEquipItemWnd::OnDrawToolTip(NCGDevice* Device)
         X = CellSize * 4 + 0x29;
     else
         X = (CellSize + 7) * Col + 7;
+#endif
     for (INT i = 0; i < Items.Num(); i++)
     {
         INT Slot = GetEquipSlot(AsC4(Items(i))->BodyPart, AsC4(Items(i))->ObjectID);
@@ -433,7 +466,13 @@ INT NCEquipItemWnd::OnDrawToolTip(NCGDevice* Device)
         Wnd.Y = ScreenY;
         Wnd.W = Width;
         Wnd.H = Height;
+#if NW_CUSTOM
+        INT HX, HY;
+        HennaXY(HoverHenna, HX, HY);
+        ToolTipSkin->DrawFull(Device, AsC4((NItemEntry*)Hennas(HoverHenna))->ToolTip, HX + 1, HY, Wnd);
+#else
         ToolTipSkin->DrawFull(Device, AsC4((NItemEntry*)Hennas(HoverHenna))->ToolTip, 0xD8, HoverHenna * 0x1A + 8, Wnd);
+#endif
     }
     Device->ReleaseClip();
     Device->EndPaint();
@@ -460,8 +499,15 @@ INT NCEquipItemWnd::HitTest(INT X, INT Y)
     Box.H = 32.0f;
     for (INT i = 0; i < 15; i++)
     {
+#if NW_CUSTOM
+        INT SX, SY;
+        SlotXY(i, SX, SY);
+        Box.X = ScreenX + SX;
+        Box.Y = ScreenY + SY;
+#else
         Box.X = ScreenX + 7 + ColumnX[i % 5];
         Box.Y = ScreenY + 7 + RowY[i / 5];
+#endif
         if (PtInRect(X, Y, Box))
             return i;
     }
@@ -982,8 +1028,15 @@ void NCEquipItemWnd::AddHenna(INT HennaID, INT bUsable)
         Entry->Icon[0] = FindTexture(Entry->IconName[0]);
         if (!Entry->Icon[0])
             Entry->Icon[0] = FindTexture(TEXT("NWindow.BlackTexture"));
+#if NW_CUSTOM
+        INT HX, HY;
+        HennaXY(Hennas.Num(), HX, HY);
+        Henna->Box.Y = HY;
+        Henna->Box.X = HX + 1;
+#else
         Henna->Box.Y = Hennas.Num() * 0x1B + 8;
         Henna->Box.X = 0xD8;
+#endif
         Henna->Box.W = 24.0f;
         Henna->Box.H = 24.0f;
         Entry->ToolTip.Fill(Henna, NTT_Name, 0);

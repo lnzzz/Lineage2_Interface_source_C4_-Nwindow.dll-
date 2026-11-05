@@ -13,6 +13,9 @@
 #include "nwindow/NCInvenWeightWnd.h"
 #include "nwindow/NCTabControl.h"
 #include "nwindow/NItemC4.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomInventory.h"
+#endif
 
 #include <stdio.h>
 #include <wchar.h>
@@ -80,6 +83,12 @@ NCInventoryWnd::NCInventoryWnd()
     RecipeH = 34.0f;
     RecipeX = 0xE;
     RecipeY = 0x15F;
+#if NW_CUSTOM
+    TrashX += NCustomInventory::LowerShiftX;   // custom: the adena box is under the grid in the wide window
+    TrashY += NCustomInventory::LowerShiftY;
+    RecipeX += NCustomInventory::LowerShiftX;
+    RecipeY += NCustomInventory::LowerShiftY;
+#endif
 }
 NW_HOOK_CTOR(0x10099900, NCInventoryWnd)
 
@@ -89,7 +98,13 @@ NW_HOOK_DTOR(0x10099a00, NCInventoryWnd)
 // 0x10148f10 (vslot 25) - NControl::WindowProc's body, which the stock vtables of these windows share: NCWnd's, as 0 or 1
 INT NCInventoryWnd::WindowProc(UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+#if NW_CUSTOM
+    if (NCWnd::WindowProc(Msg, wParam, lParam))
+        return 1;
+    return Msg == NWM_COMMAND && NCustomInventory::OnCommand(this, (INT)wParam);   // custom: the tabs and the sort button
+#else
     return NCWnd::WindowProc(Msg, wParam, lParam) != 0;
+#endif
 }
 
 // 0x10093f00 (ret 8) - the point is inside the trash icon's box (from this window's corner; the box is a position
@@ -318,18 +333,24 @@ INT NCInventoryWnd::OnPaint(NCGDevice* Device)
     CountText[0] = 0;   // (the stock leaves it as it was when there is no player)
     Device->BeginPaint(ScreenX, ScreenY);
     Device->SetClip(ScreenX, ScreenY, (INT)Width, (INT)Height);
+#if NW_CUSTOM
+    NCustomInventory::PaintBack(this, Device);   // custom: the wide window's back; the adena box is under the grid
+    const INT DX = NCustomInventory::LowerShiftX, DY = NCustomInventory::LowerShiftY;
+#else
     if (BackTex)
         Device->DrawTexture(0, 0x14, 0x100, 0x17D, 0, 0, 0x100, 0x17D, BackTex, 0xFF, 1);
+    const INT DX = 0, DY = 0;
+#endif
 
     appSprintf(Text, TEXT("%d"), ItemWnd[0]->GetAdena());
     FormatNumber(Formatted, Text);
     appSprintf(Text, TEXT("%s"), Formatted);
     NCGDevice::GetTextExtent(&Size, Text, 0, 0, 0, 0, 0, L2FONT_Normal);
-    Device->DrawText(0xC7 - Size.cx, 0x164, 0xFFDCDCDC, Text, 0, 0, 0, L2FONT_Normal, 0, 0, 0, 0, 0, 0, 0);
+    Device->DrawText(0xC7 + DX - Size.cx, 0x164 + DY, 0xFFDCDCDC, Text, 0, 0, 0, L2FONT_Normal, 0, 0, 0, 0, 0, 0, 0);
     if (AdenaTex)
-        Device->DrawTexture(0x62, 0x163, 0x10, 0xC, 0, 0, 0x10, 0xC, AdenaTex, 0xFF, 1);
+        Device->DrawTexture(0x62 + DX, 0x163 + DY, 0x10, 0xC, 0, 0, 0x10, 0xC, AdenaTex, 0xFF, 1);
     if (WeightIconTex)
-        Device->DrawTexture(0x62, 0x174, 0x10, 0xC, 0, 0, 0x10, 0xC, WeightIconTex, 0xFF, 1);
+        Device->DrawTexture(0x62 + DX, 0x174 + DY, 0x10, 0xC, 0, 0, 0x10, 0xC, WeightIconTex, 0xFF, 1);
 
     User* Me = GConsole->GetMyUser();
     if (Me)
@@ -342,9 +363,13 @@ INT NCInventoryWnd::OnPaint(NCGDevice* Device)
         appSprintf(CountText, TEXT("(%d/%d)"), EquipWnd->Items.Num() + ItemWnd[1]->Items.Num() + ItemWnd[0]->Items.Num(),
                    (INT)::nw::Field<SWORD>(Me, 0x230));
     }
+#if NW_CUSTOM
+    NCustomInventory::PaintCount(this, Device, CountText);   // custom: beside the sort button
+#else
     NCGDevice::GetTextExtent(&Size, CountText, 0, 0, 0, 0, 0, L2FONT_Normal);
     Device->DrawText((INT)((DOUBLE)Width - (DOUBLE)Size.cx - 5.0), 0xA2, 0xFFB09B79, CountText, 0, 0, 0, L2FONT_Normal, 0, 0,
                      0, 0, 0, 0, 0);
+#endif
     Device->EndPaint();
     Device->ReleaseClip();
     return 1;
@@ -370,6 +395,9 @@ INT NCInventoryWnd::OnDestroy()
 {
     guard(NCInventoryWnd::OnDestroy);
     SaveItemOrder();
+#if NW_CUSTOM
+    NCustomInventory::DestroyControls(this);
+#endif
     DestroyChild(this, ItemWnd[0]);
     DestroyChild(this, ItemWnd[1]);
     DestroyChild(this, EquipWnd);
@@ -402,6 +430,9 @@ void NCInventoryWnd::ShowWindow()
     else
         RecipeButton->HideWindow();
     ReadItemOrder();
+#if NW_CUSTOM
+    NCustomInventory::KeepOnScreen(this);
+#endif
 }
 NW_HOOK_METHOD(0x10098dc0, NCInventoryWnd, ShowWindow)
 
@@ -549,28 +580,41 @@ INT NCInventoryWnd::OnCreate()
 
     FrameCtrl = new NCFrameCtrl(1, 0, 0);
     FrameCtrl->ID = NID_INVENTORY_FRAME;
-    FrameCtrl->SetPosition(0, 0, 0x100, 0x14);
+#if NW_CUSTOM
+    // custom: the wide window (NCustomInventory.h): the paperdoll on the left, the pages in a grid on the right, the adena box
+    // under the grid; the stock tabs are kept (they switch the pages) but out of sight: NCustomInventory draws its own
+    using namespace NCustomInventory;
+    const INT FrameW = NCustomInventory::Width, PageX = GridX, PageY = GridY;
+    const INT PageW = GridColumns * 37 + 14, PageH = GridRows * 35 - 1, Columns = GridColumns, Rows = GridRows;
+    const INT TabsX = 0, TabsY = -4000, DX = LowerShiftX, DY = LowerShiftY;
+    const INT EquipX = DollX, EquipY = DollY, EquipW = DollW, EquipH = DollH;
+#else
+    const INT FrameW = 0x100, PageX = 9, PageY = 0xBD, PageW = 0xEC, PageH = 0x8B, Columns = 6, Rows = 4;
+    const INT TabsX = 0xC, TabsY = 0x9F, DX = 0, DY = 0;
+    const INT EquipX = 8, EquipY = 0x1F, EquipW = 0xF0, EquipH = 0x7A;
+#endif
+    FrameCtrl->SetPosition(0, 0, FrameW, 0x14);
     CreateChild(FrameCtrl, NWS_VISIBLE);
 
     EquipWnd = new NCEquipItemWnd(0x20);
-    EquipWnd->SetPosition(8, 0x1F, 0xF0, 0x7A);
+    EquipWnd->SetPosition(EquipX, EquipY, EquipW, EquipH);
     CreateChild(EquipWnd, NWS_VISIBLE | 0x20);
 
-    ItemWnd[0] = new NCInvenItemWnd(6, 4, 0xFA, 0x20, 5, 3);
-    ItemWnd[0]->SetPosition(9, 0xBD, 0xEC, 0x8B);
+    ItemWnd[0] = new NCInvenItemWnd(Columns, Rows, 0xFA, 0x20, 5, 3);
+    ItemWnd[0]->SetPosition(PageX, PageY, PageW, PageH);
     CreateChild(ItemWnd[0], NWS_VISIBLE | 0x20);
 
-    ItemWnd[1] = new NCInvenItemWnd(6, 4, 0xFA, 0x20, 5, 3);
-    ItemWnd[1]->SetPosition(9, 0xBD, 0xEC, 0x8B);
+    ItemWnd[1] = new NCInvenItemWnd(Columns, Rows, 0xFA, 0x20, 5, 3);
+    ItemWnd[1]->SetPosition(PageX, PageY, PageW, PageH);
     CreateChild(ItemWnd[1], NWS_VISIBLE | 0x20);
 
     TabCtrl = new NCTabControl();
     TabCtrl->ID = NID_INVENTORY_TAB;
-    TabCtrl->SetPosition(0xC, 0x9F, 0xBD, 0x17);
+    TabCtrl->SetPosition(TabsX, TabsY, 0xBD, 0x17);
     CreateChild(TabCtrl, NWS_VISIBLE);
 
     WeightWnd = NewInvenWeightWnd();
-    WeightWnd->SetPosition(0x75, 0x174, 0x55, 0xC);
+    WeightWnd->SetPosition(0x75 + DX, 0x174 + DY, 0x55, 0xC);
     CreateChild(WeightWnd, NWS_VISIBLE | 0x20);
 
     AddInvenTab(TabCtrl, STR_Item, ItemWnd[0]);
@@ -593,6 +637,9 @@ INT NCInventoryWnd::OnCreate()
     CreateChild(TrashButton, NWS_VISIBLE | 0x20);
     TrashButton->HideWindow();
     TrashButton->SetToolTip(0x37A, 1);
+#if NW_CUSTOM
+    NCustomInventory::CreateControls(this);
+#endif
     return 1;
 }
 NW_HOOK_METHOD(0x10099a60, NCInventoryWnd, OnCreate)

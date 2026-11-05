@@ -391,9 +391,9 @@ INT NCShortCutOptionWnd::OnCreate()
     GEnterChatBox->SetPosition(16, OPT_ChatY, 200, 12);
     CreateChild(GEnterChatBox, NWS_VISIBLE);
 
-    GAutoPotionButton = new NCButton(TEXT("L2UI_ch3.button.smallbutton2"), TEXT("L2UI_ch3.button.smallbutton2_down"), 0);
+    GAutoPotionButton = new NCButton(TEXT("L2UI_ch3.button.bigbutton"), TEXT("L2UI_ch3.button.bigbutton_down"), 0);
     GAutoPotionButton->ID = NID_OPT_AUTOPOTION;
-    GAutoPotionButton->SetPosition(83, OPT_BarsY + 22, 90, 21);
+    GAutoPotionButton->SetPosition(80, OPT_BarsY + 22, 96, 23);   // the art's size (buttons draw 1:1): the label centred on it
     CreateChild(GAutoPotionButton, NWS_VISIBLE);
     GAutoPotionButton->SetText(TEXT("Autopociones"));
 

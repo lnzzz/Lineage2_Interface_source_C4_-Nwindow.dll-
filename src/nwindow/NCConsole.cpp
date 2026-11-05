@@ -40,6 +40,7 @@
 #include "nwindow/NCShortCutWnd.h"
 #if NW_CUSTOM
 #include "nwindow/NCustomShortCuts.h"
+#include "nwindow/NCustomInventory.h"
 #endif
 #include "nwindow/NCSiegeInfoMainWnd.h"
 #include "nwindow/NCStatusWnd.h"
@@ -522,7 +523,13 @@ INT NCConsole::OnCreate()
     // class 0x102dbdd0
     W = new NCInventoryWnd;
     nw::Field<NCWnd*>(this, 0x120) = W;   // InventoryWnd
+#if NW_CUSTOM
+    // custom: the wide inventory (NCustomInventory.h)
+    W->SetPosition((INT)(((Local.W - (FLOAT)NCustomInventory::Width) - 46.0f)), (INT)(((Local.H * 0.5f) - 252.0f)),
+                   NCustomInventory::Width, NCustomInventory::Height, 1, 1, 5);
+#else
     W->SetPosition((INT)(((Local.W - 256.0f) - 46.0f)), (INT)(((Local.H * 0.5f) - 252.0f)), 0x100, 0x191, 1, 1, 5);
+#endif
     E = AddChildWindow(nw::Field<NCWnd*>(this, 0x120), 0x3002);
     AttachInline(this, W, E);   // the inline attach
     nw::Field<NCWnd*>(this, 0x120)->Unknown78 = ++GNextWndNumber;
