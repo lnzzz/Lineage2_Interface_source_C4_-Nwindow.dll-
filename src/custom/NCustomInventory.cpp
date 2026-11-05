@@ -592,7 +592,12 @@ void NCustomInventory::PaintBack(NCInventoryWnd* Wnd, NCGDevice* Device)
 
 void NCustomInventory::PaintCount(NCInventoryWnd* Wnd, NCGDevice* Device, const TCHAR* Text)
 {
-    Device->DrawText(SortX + 104, SortY + 5, 0xFFB09B79, Text, 0, 0, 0, L2FONT_Normal, 0, 0, 0, 0, 0, 0, 0);
+    // in the adena / weight box, centered in its empty left part (from its inside's edge to the adena icon) and between the
+    // adena and the weight rows
+    enum { Left = LowerX + 10, Right = LowerX + 0x60, Y = LowerY + 24 };
+    SIZE Size;
+    NCGDevice::GetTextExtent(&Size, Text, 0, 0, 0, 0, 0, L2FONT_Normal);
+    Device->DrawText((Left + Right - Size.cx) / 2, Y, 0xFFB09B79, Text, 0, 0, 0, L2FONT_Normal, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /*-----------------------------------------------------------------------------

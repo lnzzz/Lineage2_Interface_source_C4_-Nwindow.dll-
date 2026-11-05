@@ -364,7 +364,7 @@ INT NCInventoryWnd::OnPaint(NCGDevice* Device)
                    (INT)::nw::Field<SWORD>(Me, 0x230));
     }
 #if NW_CUSTOM
-    NCustomInventory::PaintCount(this, Device, CountText);   // custom: beside the sort button
+    NCustomInventory::PaintCount(this, Device, CountText);   // custom: in the adena / weight box
 #else
     NCGDevice::GetTextExtent(&Size, CountText, 0, 0, 0, 0, 0, L2FONT_Normal);
     Device->DrawText((INT)((DOUBLE)Width - (DOUBLE)Size.cx - 5.0), 0xA2, 0xFFB09B79, CountText, 0, 0, 0, L2FONT_Normal, 0, 0,
