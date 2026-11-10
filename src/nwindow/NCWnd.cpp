@@ -1191,7 +1191,10 @@ INT NCWnd::OnMouseMove(WPARAM wParam, LPARAM lParam)
 NW_HOOK_METHOD(0x10036240, NCWnd, OnMouseMove)
 
 // 0x10036350 (vslot 62, guard) - the press starts the drag of a drag-able window (the cursor is locked), else the
-// ancestor gets it
+// ancestor gets it. Always 1, also without a drag-able ancestor (0x100363c6 jumps to the `mov eax, 1`; OnLButtonUp is
+// the one that returns 0 then): SetFocusingWindow stops at the window that took the press. Returning 0 there made it
+// try the next sibling, and two overlapping windows (an NPC dialog over the main window) then took the focus from each
+// other forever, each one moved to the head of the list the loop walks (the client hung)
 INT NCWnd::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 {
     guard(NCWnd::OnLButtonDown);
@@ -1199,9 +1202,8 @@ INT NCWnd::OnLButtonDown(WPARAM wParam, LPARAM lParam)
     if (!(Style & NWS_DRAGABLE))
     {
         NCWnd* Drag = GetDragableParentWnd();
-        if (!Drag)
-            return 0;
-        Drag->OnLButtonDown(wParam, lParam);
+        if (Drag)
+            Drag->OnLButtonDown(wParam, lParam);
     }
     else
     {

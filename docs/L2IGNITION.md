@@ -55,6 +55,12 @@ Valen para los dos builds (no dependen de `NW_CUSTOM`):
   donde el control lee la alineación (+0x1F8) y la alineación donde lee el color (+0x21C), así que no se veía el nombre
   propio, ni el del target, la mascota o el summon. La DLL original guarda el tercer argumento en +0x1F8 y el cuarto en
   +0x21C.
+- **Cliente colgado al hacer clic sobre dos ventanas superpuestas** (`NCWnd::OnLButtonDown` en `src/nwindow/NCWnd.cpp`):
+  devolvía 0 cuando la ventana no se arrastra y no tiene un ancestro que se arrastre; la DLL original devuelve 1 por los
+  tres caminos (0x100363C6 salta al mismo `mov eax, 1`). Con 0, `NCVirtualWndMain::SetFocusingWindow` seguía con la
+  ventana hermana siguiente, pero `SetFocus` ya había movido la tocada al principio de la lista que recorre: dos ventanas
+  superpuestas (el chat de un NPC sobre la ventana de skills) se pasaban el foco para siempre y el juego quedaba al 100 %
+  de un núcleo. Visto en vivo en un cliente colgado: `GFocusEntry` alternaba entre `NCHtmlViewer` y `NCSkillItemWnd`.
 
 ## Compilar
 
