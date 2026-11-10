@@ -7,6 +7,9 @@
 #include "nwindow/NCComboBox.h"
 #include "nwindow/NCGDevice.h"
 #include "nwindow/NConsoleWnd.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomAudio.h"
+#endif
 
 // 0x100cb380
 NCAudioOptionWnd::NCAudioOptionWnd()
@@ -20,10 +23,16 @@ NW_HOOK_CTOR(0x100cb380, NCAudioOptionWnd)
 // 0x100cb3e0
 NW_HOOK_DTOR(0x100cb3e0, NCAudioOptionWnd)
 
-// stock body shared with NControl's (0x10004e90)
+// stock body shared with NControl's (0x10004e90). Custom: the "Mute All Sounds" box (NCustomAudio)
 INT NCAudioOptionWnd::WindowProc(UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-    return NCWnd::WindowProc(Msg, wParam, lParam) != 0;
+    if (NCWnd::WindowProc(Msg, wParam, lParam))
+        return 1;
+#if NW_CUSTOM
+    if (Msg == NWM_COMMAND)
+        return NCustomAudio::OnCommand(this, (INT)wParam) != 0;
+#endif
+    return 0;
 }
 
 // 0x100c9530 (vslot 37) - four volume boxes (sound, music, the two voice ones), 125 x 17 at x 107, 19 px apart from y 11
@@ -46,6 +55,9 @@ INT NCAudioOptionWnd::OnCreate()
     OggVoiceCombo->ID = NID_AUDIO_OGGVOICE;
     OggVoiceCombo->SetPosition(107, 68, 125, 17);
     CreateChild(OggVoiceCombo, NWS_VISIBLE);
+#if NW_CUSTOM
+    NCustomAudio::OnCreate(this);   // before InitVolumes: SelectVolumes sets the box
+#endif
     InitVolumes();
     return 1;
 }
@@ -66,6 +78,9 @@ template <class T> static FORCEINLINE void DestroyChild(NCWnd* Parent, T*& Child
 INT NCAudioOptionWnd::OnDestroy()
 {
     guard(NCAudioOptionWnd::OnDestroy);
+#if NW_CUSTOM
+    NCustomAudio::OnDestroy(this);
+#endif
     DestroyChild(this, SoundCombo);
     DestroyChild(this, MusicCombo);
     DestroyChild(this, WavVoiceCombo);
@@ -187,6 +202,9 @@ __declspec(noinline) void NCAudioOptionWnd::SelectVolumes()
         SelectLevel(OggVoiceCombo, GConsole->Engine->Audio->GetOggVoiceVolume());
     else
         OggVoiceCombo->EnableWindow(0);
+#if NW_CUSTOM
+    NCustomAudio::OnSelectVolumes(this);
+#endif
 }
 NW_HOOK_METHOD(0x100c4270, NCAudioOptionWnd, SelectVolumes)
 
@@ -321,6 +339,9 @@ void NCAudioOptionWnd::Apply()
         appSprintf(Buffer, TEXT("%f"), GConsole->Engine->Audio->GetOggVoiceVolume());
         GConfig->SetString(TEXT("Audio"), TEXT("OggVoiceVolume"), Buffer, TEXT("Option.ini"));
     }
+#if NW_CUSTOM
+    NCustomAudio::OnApply(this);
+#endif
 }
 NW_HOOK_METHOD(0x100c7320, NCAudioOptionWnd, Apply)
 

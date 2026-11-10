@@ -42,10 +42,15 @@ build standalone; el build hook sigue siendo fiel al original.
   - La caja del modelo tiene la línea gris de 1 px de las casillas, a la par de la primera y la última casilla de cada
     columna. Los dibujos de las casillas vacías van 1 px más abajo que en el fondo original, para que el marco de un ítem
     equipado caiga justo sobre su borde.
+- **"Mute All Sounds"** (`src/custom/NCustomAudio.cpp`): un checkbox en Opciones → Audio, debajo de los cuatro volúmenes.
+  Tildarlo guarda los niveles que muestran, los pone en Off y los deja en gris; destildarlo devuelve los guardados. Se
+  aplica con OK / Aplicar, como las demás opciones (el `Apply` original pone los volúmenes; Off corta lo que suena), y
+  ahí se guardan el estado y los niveles en `[Audio]` (`MuteAll`, `Level0` .. `Level3`: sonido, música y las dos voces,
+  0 = "5" .. 5 = Off). Cancelar no cambia nada: al abrir la página se ve lo guardado.
 - **GameGuard del login**: la respuesta automática devuelve la misma consulta en vez de ceros (como el parche que el
   cliente usaba con la DLL original).
 
-La configuración queda en `system\NWindowCustom.ini` (`[ShortCut]` y `[AutoPotion]`).
+La configuración queda en `system\NWindowCustom.ini` (`[ShortCut]`, `[AutoPotion]`, `[Damage]` y `[Audio]`).
 
 ## Correcciones de la reconstrucción
 
