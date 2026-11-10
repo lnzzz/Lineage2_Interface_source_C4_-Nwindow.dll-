@@ -18,6 +18,9 @@
 #include "nwindow/NCRestartMenuWnd.h"
 #include "nwindow/NCItemWnd.h"
 #include "nwindow/NConsoleWndExt.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomShortCuts.h"
+#endif
 
 // interface sounds (FL2NetNotify::OnInterfacePlaySound; names ours)
 enum { SOUND_UseShortcut = 1, SOUND_PickUp = 3 };
@@ -309,6 +312,10 @@ NW_HOOK_METHOD(0x100681c0, NConsoleWnd, RequestHennaUnequip)
 // 0x1007a1e0 - NetHandler slot 142, then the pickup sound (the icon was dropped on the bar)
 void NConsoleWnd::RequestShortCutReg(L2ParamStack& Params)
 {
+#if NW_CUSTOM
+    if (NCustomShortCuts::IsLocked())   // custom: locked bars: nothing dropped on a bar is registered
+        return;
+#endif
     Engine->NetHandler->RequestShortCutReg(Params);
     PlayInterfaceSound(SOUND_PickUp);
 }

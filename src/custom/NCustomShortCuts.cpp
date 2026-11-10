@@ -3,6 +3,7 @@
 =============================================================================*/
 #include "nwindow/NCustomShortCuts.h"
 #include "nwindow/NCustomAutoPotion.h"
+#include "nwindow/NCustomDamage.h"
 #include "nwindow/NCButton.h"
 #include "nwindow/NCCheckBox.h"
 #include "nwindow/NCConsole.h"
@@ -13,6 +14,8 @@
 // the bars and their state (statics: the windows have no field of their own)
 static NCExtraShortCutWnd* GBars[NCustomShortCuts::MaxBars];
 static NCPushButton* GExpandButton = NULL;
+static NCPushButton* GLockButton = NULL;
+static UBOOL GLocked = 0;
 static INT GShownBars = 0;                         // how many extra bars are shown (0 .. MaxBars)
 static INT GSavedPages[NCustomShortCuts::MaxBars];  // the pages last written to the ini file
 static INT GLayoutHorizontal = -1;                 // the main bar's orientation the set was last laid out for
@@ -185,11 +188,79 @@ INT NCustomShortCuts::IndexOf(const NCShortCutWnd* Wnd)
     return -1;
 }
 
+/*-----------------------------------------------------------------------------
+    The lock button: the expand button's face (its "+" covered) with a padlock drawn on it, open or closed.
+-----------------------------------------------------------------------------*/
+
+class NCLockButton : public NCPushButton
+{
+public:
+    static UClass* StaticClass() { return NCPushButton::StaticClass(); }
+
+    NCLockButton() : NCPushButton(TEXT("L2UI_CH3.QUESTWND.QuestWndPlusBtn"), TEXT("L2UI_CH3.QUESTWND.QuestWndPlusBtn_over")) {}
+
+    virtual INT OnPaint(NCGDevice* Device);
+};
+NW_ASSERT_SIZE(NCLockButton, 0x2C0);
+
+// the face (15 x 15: the frame, the dark inside from 3, 2 to 12, 12) and on it the padlock: the body (8 x 5 with a 2 x 2
+// key hole) and the shackle, in the body when closed, lifted with its right side out when open. Plain textures stretched
+// (the device's DrawRect draws its white texture half transparent, whatever the colour)
+INT NCLockButton::OnPaint(NCGDevice* Device)
+{
+    UTexture* Dark = FindTexture(TEXT("NWindow.BlackTexture"));
+    UTexture* Light = FindTexture(TEXT("NWindow.WhiteTexture"));
+    Device->BeginPaint(ScreenX, ScreenY);
+    Device->SetClip(ScreenX, ScreenY, (INT)Width, (INT)Height);
+    DrawButton(Device);
+    struct NBox { BYTE X, Y, W, H; };
+    static const NBox Body[] = { { 4, 7, 8, 5 } }, Hole[] = { { 7, 8, 2, 2 } };
+    static const NBox Closed[] = { { 6, 3, 4, 1 }, { 5, 4, 1, 3 }, { 10, 4, 1, 3 } };
+    static const NBox Open[] = { { 6, 2, 4, 1 }, { 5, 3, 1, 4 }, { 10, 3, 1, 1 } };
+    Device->DrawTexture(3, 2, 10, 11, 0, 0, 1, 1, Dark, 0xFF, 1);
+    Device->DrawTexture(Body[0].X, Body[0].Y, Body[0].W, Body[0].H, 0, 0, 1, 1, Light, 0xFF, 1);
+    Device->DrawTexture(Hole[0].X, Hole[0].Y, Hole[0].W, Hole[0].H, 0, 0, 1, 1, Dark, 0xFF, 1);
+    const NBox* Shackle = GLocked ? Closed : Open;
+    for (INT i = 0; i < 3; i++)
+        Device->DrawTexture(Shackle[i].X, Shackle[i].Y, Shackle[i].W, Shackle[i].H, 0, 0, 1, 1, Light, 0xFF, 1);
+    Device->ReleaseClip();
+    Device->EndPaint();
+    return 1;
+}
+
+static void UpdateLockButton(NCShortCutWnd* Main)
+{
+    if (!GLockButton)
+        return;
+    if (GLayoutHorizontal != Main->bHorizontal)
+    {
+        if (Main->bHorizontal)
+            GLockButton->SetPosition(0x1E9, 1, 0xF, 0xF);
+        else
+            GLockButton->SetPosition(1, 0x1E9, 0xF, 0xF);
+    }
+    // the game pad button has that place while a game pad is in use; the pad layout has no room
+    UBOOL bShow = Main->bPadMode == 0 && !(GL2UsingJoystick && GL2CanUseJoystick);
+    if (bShow != (GLockButton->IsShowWindow() != 0))
+    {
+        if (bShow)
+            GLockButton->ShowWindow();
+        else
+            GLockButton->HideWindow();
+    }
+}
+
+UBOOL NCustomShortCuts::IsLocked()
+{
+    return GLocked;
+}
+
 static void UpdateExpandButton(NCShortCutWnd* Main)
 {
     if (!GExpandButton)
         return;
     INT Maxed = GShownBars >= NCustomShortCuts::MaxBars;
+    UpdateLockButton(Main);
     if (GLayoutHorizontal != Main->bHorizontal)
     {
         if (Main->bHorizontal)
@@ -319,11 +390,12 @@ UBOOL NCustomShortCuts::OnMenuCommand(WPARAM ID)
 enum
 {
     OPT_Width = 256,
-    OPT_Height = 240,
+    OPT_Height = 262,
     OPT_ChatY = 32,          // the Enter to chat check box
     OPT_BarsY = 76,          // the extra bars row
     OPT_FirstKeysY = 132,    // the first bar's key set row
     OPT_RowStep = 20,
+    OPT_DamageY = 238,       // the damage check box, under the key sets
     OPT_ValueX = 150,        // the value's center, between the two arrows
     OPT_PrevX = 98,
     OPT_NextX = 190,
@@ -332,6 +404,7 @@ enum
     NID_OPT_BARS_PREV = (INT)0xFF100003,
     NID_OPT_BARS_NEXT = (INT)0xFF100004,
     NID_OPT_AUTOPOTION = (INT)0xFF100005,
+    NID_OPT_DAMAGE = (INT)0xFF100006,
     NID_OPT_KEYS_PREV = (INT)0xFF100010,   // + the bar (0 .. MaxBars)
     NID_OPT_KEYS_NEXT = (INT)0xFF100020,   // + the bar
 };
@@ -339,6 +412,7 @@ enum
 static NCShortCutOptionWnd* GOptionWnd = NULL;
 static UBOOL GOptionShown = 0;   // the window was opened (Alt+S, right click) and not closed since
 static NCCheckBox* GEnterChatBox = NULL;
+static NCCheckBox* GDamageBox = NULL;
 static NCButton* GBarsArrows[2] = { NULL, NULL };
 static NCButton* GAutoPotionButton = NULL;
 static NCButton* GKeysArrows[NCustomShortCuts::MaxBars + 1][2];
@@ -391,6 +465,11 @@ INT NCShortCutOptionWnd::OnCreate()
     GEnterChatBox->SetPosition(16, OPT_ChatY, 200, 12);
     CreateChild(GEnterChatBox, NWS_VISIBLE);
 
+    GDamageBox = new NCCheckBox(TEXT("Mostrar el dano sobre el objetivo"), NCustomDamage::IsShown(), 0, 0);
+    GDamageBox->ID = NID_OPT_DAMAGE;
+    GDamageBox->SetPosition(16, OPT_DamageY, 220, 12);
+    CreateChild(GDamageBox, NWS_VISIBLE);
+
     GAutoPotionButton = new NCButton(TEXT("L2UI_ch3.button.bigbutton"), TEXT("L2UI_ch3.button.bigbutton_down"), 0);
     GAutoPotionButton->ID = NID_OPT_AUTOPOTION;
     GAutoPotionButton->SetPosition(80, OPT_BarsY + 22, 96, 23);   // the art's size (buttons draw 1:1): the label centred on it
@@ -421,6 +500,7 @@ template <class T> static void DestroyOptionChild(NCWnd* Parent, T*& Child)
 INT NCShortCutOptionWnd::OnDestroy()
 {
     DestroyOptionChild(this, GEnterChatBox);
+    DestroyOptionChild(this, GDamageBox);
     DestroyOptionChild(this, GAutoPotionButton);
     DestroyOptionChild(this, GBarsArrows[0]);
     DestroyOptionChild(this, GBarsArrows[1]);
@@ -462,6 +542,11 @@ INT NCShortCutOptionWnd::WindowProc(UINT Msg, WPARAM wParam, LPARAM lParam)
     {
         GIsEnterChatting = GEnterChatBox->bChecked;
         GConfig->SetBool(TEXT("Game"), TEXT("EnterChatting"), GIsEnterChatting, TEXT("Option.ini"));
+        return 1;
+    }
+    if (ID == NID_OPT_DAMAGE)
+    {
+        NCustomDamage::SetShown(GDamageBox->bChecked);
         return 1;
     }
     if (ID == NID_OPT_AUTOPOTION)
@@ -577,6 +662,12 @@ void NCustomShortCuts::Create(NCConsole* Desktop)
     GExpandButton->ID = NID_SHORTCUT_EXPAND;
     GExpandButton->SetPosition(0x1F, 0x1E9, 0xF, 0xF);
     Main->CreateChild(GExpandButton, NWS_VISIBLE);
+    GLocked = IniGetInt(TEXT("Locked"), 0) != 0;
+    GLockButton = new NCLockButton;
+    GLockButton->ID = NID_SHORTCUT_LOCK;
+    GLockButton->SetPosition(1, 0x1E9, 0xF, 0xF);
+    Main->CreateChild(GLockButton, NWS_VISIBLE);
+    GLockButton->SetToolTipText(TEXT("Bloquear / desbloquear las barras"), 1);
     GLayoutHorizontal = -1;
     GLayoutMaxed = -1;
 
@@ -608,6 +699,12 @@ void NCustomShortCuts::Destroy(NCConsole* Desktop)
         delete GExpandButton;
     }
     GExpandButton = NULL;
+    if (GLockButton && Main)
+    {
+        Main->RemoveChildWindow(GLockButton->Entry);
+        delete GLockButton;
+    }
+    GLockButton = NULL;
     for (INT i = 0; i < MaxBars; i++)
     {
         if (GBars[i])
@@ -686,7 +783,16 @@ void NCustomShortCuts::Tick()
 
 UBOOL NCustomShortCuts::OnCommand(NCShortCutWnd* Wnd, WPARAM ID)
 {
-    if (ID != (WPARAM)NID_SHORTCUT_EXPAND || Wnd != MainBar())
+    if (Wnd != MainBar())
+        return 0;
+    if (ID == (WPARAM)NID_SHORTCUT_LOCK)
+    {
+        Wnd->bDragging = 0;
+        GLocked = !GLocked;
+        IniSetInt(TEXT("Locked"), GLocked);
+        return 1;
+    }
+    if (ID != (WPARAM)NID_SHORTCUT_EXPAND)
         return 0;
     Wnd->bDragging = 0;
     GShownBars = GShownBars >= MaxBars ? 0 : GShownBars + 1;

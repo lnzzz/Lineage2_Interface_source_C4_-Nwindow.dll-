@@ -674,6 +674,10 @@ INT NCShortCutWnd::OnLButtonDown(WPARAM wParam, LPARAM lParam)
     {
         bDragging = 1;
         bPressed = 1;
+#if NW_CUSTOM
+        if (NCustomShortCuts::IsLocked())   // custom: locked bars: a click still uses the slot, but it is not dragged
+            bDragging = 0;
+#endif
     }
     return 1;
 }

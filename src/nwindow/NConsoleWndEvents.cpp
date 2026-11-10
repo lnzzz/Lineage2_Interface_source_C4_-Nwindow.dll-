@@ -51,6 +51,9 @@
 #include "nwindow/NCPetInventoryWnd.h"
 #include "nwindow/NCTrainListBox.h"
 #include "nwindow/NCLoadingWnd.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomDamage.h"
+#endif
 
 #if NW_FEATURES
 // phase 6: AutoShot (NWindow_C1 src/inject/AutoShot.cpp), CraftUi (NWindow_C1
@@ -1825,6 +1828,10 @@ void NConsoleWnd::EndSystemMessageParam(L2ParamStack& Params, INT P2, INT P3, IN
         nw::Field<NCWnd*>(GetDesktop(), 0x240)->HideWindow();
         return;
     }
+#if NW_CUSTOM
+    if (!P2)   // custom: the damage over the target's head
+        NCustomDamage::OnSystemMessage(ID, NumParams ? SysMsgParams(0).Text : NULL);
+#endif
     if (!GL2GameData.SystemMsg[ID].Unknown0 || ID < 0 || ID >= 3000)
     {
         TCHAR Error[254];

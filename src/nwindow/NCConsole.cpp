@@ -41,6 +41,7 @@
 #if NW_CUSTOM
 #include "nwindow/NCustomShortCuts.h"
 #include "nwindow/NCustomInventory.h"
+#include "nwindow/NCustomDamage.h"
 #endif
 #include "nwindow/NCSiegeInfoMainWnd.h"
 #include "nwindow/NCStatusWnd.h"
@@ -337,6 +338,11 @@ INT NCConsole::OnPaint(NCGDevice* Device)
 {
     guard(NCConsole::OnPaint);
     Device->SetClip(ScreenX, ScreenY, (INT)Width, (INT)Height);
+#if NW_CUSTOM
+    Device->BeginPaint(ScreenX, ScreenY);
+    NCustomDamage::Paint(Device);   // custom: the damage over the target's head, under every window
+    Device->EndPaint();
+#endif
     Device->ReleaseClip();
     return 1;
     unguard;

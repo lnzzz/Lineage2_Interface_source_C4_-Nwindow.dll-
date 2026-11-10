@@ -14,6 +14,10 @@
 // A right click on a bar outside its slots (or Alt+S) opens the settings window (NCShortCutOptionWnd). How many bars are shown,
 // each bar's page and each bar's key set are kept in system\NWindowCustom.ini ([ShortCut] Bars, Page1..4, Bar1Keys ..
 // Bar5Keys = F / Num / QWERTY / ASDF / ZXCV / None).
+//
+// The lock button (left of the turn button on the main bar) locks every bar: nothing can be dragged off a bar (to move or
+// delete a shortcut) or dropped on one (from the skills, the inventory, the actions, the macros ...); the shortcuts are still
+// used by click and key. Kept as [ShortCut] Locked = 0 / 1.
 
 #include "nwindow/NCShortCutWnd.h"
 #pragma pack(push, 4)
@@ -58,7 +62,7 @@ NW_ASSERT_SIZE(NCShortCutOptionWnd, 0xE8);
 
 namespace NCustomShortCuts
 {
-    enum { MaxBars = 4, NID_SHORTCUT_EXPAND = (INT)0xFF00000A };
+    enum { MaxBars = 4, NID_SHORTCUT_EXPAND = (INT)0xFF00000A, NID_SHORTCUT_LOCK = (INT)0xFF00000B };
 
     void Create(NCConsole* Desktop);           // NCConsole::OnCreate, after the stock windows
     void Destroy(NCConsole* Desktop);          // NCConsole::OnDestroy, before the stock windows
@@ -78,6 +82,7 @@ namespace NCustomShortCuts
     void PaintMenuIcons(NCWnd* Menu, NCGDevice* Device);             // NCMenuWnd::OnPaint: the potion icon's frame
     UBOOL OnMenuCommand(WPARAM ID);
     INT IndexOf(const NCShortCutWnd* Wnd);     // the extra bar's index, -1 for any other window
+    UBOOL IsLocked();                          // the bars are locked: no drag off a bar, no shortcut registered by a drop
 }
 
 #pragma pack(pop)
