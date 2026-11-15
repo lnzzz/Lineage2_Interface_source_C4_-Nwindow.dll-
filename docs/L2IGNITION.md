@@ -42,6 +42,15 @@ build standalone; el build hook sigue siendo fiel al original.
   - La caja del modelo tiene la línea gris de 1 px de las casillas, a la par de la primera y la última casilla de cada
     columna. Los dibujos de las casillas vacías van 1 px más abajo que en el fondo original, para que el marco de un ítem
     equipado caiga justo sobre su borde.
+  - **Botón de efecto de las armas Triumph** (`PaintEffectButton`, `OverEffectButton` y `ClickEffectButton`, enganchados en
+    `NCEquipItemWnd`):
+    - Es una estrella (`icon.etc_deco_star_i00`, 12 px sobre un cuadrado oscuro de 14 px) en la esquina de arriba a la
+      derecha del casillero del arma. Aparece cuando el arma equipada figura como `<id> F` en `NWindowItems.txt`.
+    - El clic pide al server el menú de efecto y color de esa arma: el bypass `triumphfx menu <object id>`, que atiende
+      `custom.TriumphEffectManager` en el server de L2 Ignition. El arma no se levanta.
+    - El doble clic sobre la estrella no la desequipa.
+    - Con el mouse encima no sale el tooltip del ítem, y la estrella se ve más clara.
+    - Una DLL vieja ignora las líneas `F`, y sin esas líneas la estrella no aparece.
 - **"Mute All Sounds"** (`src/custom/NCustomAudio.cpp`): un checkbox en Opciones → Audio, debajo de los cuatro volúmenes.
   Tildarlo guarda los niveles que muestran, los pone en Off y los deja en gris; destildarlo devuelve los guardados. Se
   aplica con OK / Aplicar, como las demás opciones (el `Apply` original pone los volúmenes; Off corta lo que suena), y

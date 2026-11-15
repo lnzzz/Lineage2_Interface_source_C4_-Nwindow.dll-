@@ -24,6 +24,7 @@ using namespace NCustomInventory;
 
 // the kinds an item is sorted by (in this order) and the filters
 enum { KIND_Money, KIND_Weapon, KIND_Armor, KIND_Jewel, KIND_Consumable, KIND_Material, KIND_Other };
+enum { KIND_EffectWeapon = 100 };   // NWindowItems.txt "F": a weapon with the effect button (not a kind to sort by)
 enum { FILTER_All, FILTER_Weapon, FILTER_Armor, FILTER_Jewel, FILTER_Consumable, FILTER_Material, FILTER_Other, Filters };
 
 // the tabs over the grid: the type filters of the "Item" page, then the "Quest" page; the sort button under the grid
@@ -89,7 +90,7 @@ static void ReadEtcKinds()
         char Letter;
         if (sscanf_s(Line, "%d %c", &ID, &Letter, 1) != 2)
             continue;
-        INT Kind = Letter == 'C' ? KIND_Consumable : Letter == 'M' ? KIND_Material : -1;
+        INT Kind = Letter == 'C' ? KIND_Consumable : Letter == 'M' ? KIND_Material : Letter == 'F' ? KIND_EffectWeapon : -1;
         if (Kind < 0)
             continue;
         if (GEtcKindCount == Capacity)
@@ -659,6 +660,84 @@ void NCustomInventory::PaintEmptySlots(NCWnd* Doll, NCGDevice* Device)
         Device->DrawTexture(X - 1, Y - 1, 34, 34, 8 + GStockSlot[Slot][0] - 1, 11 + GStockSlot[Slot][1] - 2, 34, 34, T, 0xFF, 1);
     }
 }
+
+/*-----------------------------------------------------------------------------
+    The effect button of the Triumph weapons (L2 Ignition).
+-----------------------------------------------------------------------------*/
+
+enum { FxSize = 14 };   // the button's box: a dark square with the star 1 pixel inside
+enum { SOUND_Click = 0 };   // NConsoleWnd::PlayInterfaceSound (as in NCAnnounceWnd)
+static UBOOL GFxHover;
+
+static UBOOL HasEffectButton(NItemEntry* Weapon)
+{
+    if (!Weapon)
+        return 0;
+    if (GEtcKindCount < 0)
+        ReadEtcKinds();
+    NEtcKind Key = { AsC4(Weapon)->ID, 0 };
+    NEtcKind* Found = GEtcKindCount ? (NEtcKind*)bsearch(&Key, GEtcKinds, GEtcKindCount, sizeof(NEtcKind), CompareEtcKind) : NULL;
+    return Found && Found->Kind == KIND_EffectWeapon;
+}
+
+// in the paperdoll window: the top right corner of the weapon slot's icon (a two-handed weapon, a bow or duals are drawn
+// there too)
+static void EffectButtonPos(INT& X, INT& Y)
+{
+    SlotPos(5, X, Y);
+    X += 32 - FxSize;
+}
+
+static UBOOL InEffectButton(NCWnd* Doll, INT X, INT Y)
+{
+    INT BX, BY;
+    EffectButtonPos(BX, BY);
+    BX += Doll->ScreenX;
+    BY += Doll->ScreenY;
+    return X >= BX && X < BX + FxSize && Y >= BY && Y < BY + FxSize;
+}
+
+void NCustomInventory::PaintEffectButton(NCWnd* Doll, NCGDevice* Device, NItemEntry* Weapon)
+{
+    if (!HasEffectButton(Weapon))
+    {
+        GFxHover = 0;
+        return;
+    }
+    INT X, Y;
+    EffectButtonPos(X, Y);
+    UTexture* Shade = Doll->FindTexture(TEXT("NWindow.BlackTexture"));
+    UTexture* Star = Doll->FindTexture(TEXT("icon.etc_deco_star_i00"));
+    if (Shade)
+        Device->DrawTexture(X, Y, FxSize, FxSize, 0, 0, 1, 1, Shade, GFxHover ? 0x70 : 0xB0, 1);
+    if (Star)
+        Device->DrawStretchedTex(X + 1, Y + 1, FxSize - 2, FxSize - 2, Star, 1, GFxHover ? 0xFF : 0xC8);
+}
+
+UBOOL NCustomInventory::OverEffectButton(NCWnd* Doll, NItemEntry* Weapon, INT X, INT Y)
+{
+    GFxHover = HasEffectButton(Weapon) && InEffectButton(Doll, X, Y);
+    return GFxHover;
+}
+
+static void RequestEffectPicker(NItemEntry* Weapon)
+{
+    TCHAR Bypass[64];
+    appSprintf(Bypass, TEXT("triumphfx menu %d"), AsC4(Weapon)->ObjectID);
+    L2ParamStack Params(10);
+    Params.PushBack((void*)Bypass);
+    GConsole->RequestBypassToServer(Params);
+    GConsole->PlayInterfaceSound(SOUND_Click);
+}
+
+UBOOL NCustomInventory::ClickEffectButton(NCWnd* Doll, NItemEntry* Weapon, INT X, INT Y)
+{
+    if (!HasEffectButton(Weapon) || !InEffectButton(Doll, X, Y))
+        return 0;
+    RequestEffectPicker(Weapon);
+    return 1;
+}
+
 
 // a place saved for the narrow window can leave the wide one past the screen's edge
 void NCustomInventory::KeepOnScreen(NCInventoryWnd* Wnd)

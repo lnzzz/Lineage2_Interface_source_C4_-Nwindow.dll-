@@ -21,6 +21,21 @@
 #include "nwindow/NItemC4.h"
 #if NW_CUSTOM
 #include "nwindow/NCustomInventory.h"
+
+// L2 Ignition: the worn weapon (slot 5, or 16 for a two-handed weapon), for the effect button of the Triumph weapons
+static NItemEntry* WornWeapon(NCEquipItemWnd* Self)
+{
+    for (INT i = 0; i < Self->Items.Num(); i++)
+    {
+        NItemEntry* Item = Self->Items(i);
+        if (!Item)
+            continue;
+        INT Slot = Self->GetEquipSlot(AsC4(Item)->BodyPart, AsC4(Item)->ObjectID);
+        if (Slot == 5 || Slot == 16)
+            return Item;
+    }
+    return NULL;
+}
 #endif
 #if NW_FEATURES
 // phase 6: ItemHoverTip (not in NWindow_C1: the hover tip of the item grids in the recent style)
@@ -372,6 +387,9 @@ INT NCEquipItemWnd::OnPaint(NCGDevice* Device)
             DrawSlotFrame(Device, this, Item, X6 - 1, Y6 - 1);
         }
     }
+#if NW_CUSTOM
+    NCustomInventory::PaintEffectButton(this, Device, WornWeapon(this));   // custom: over the weapon's icon
+#endif
     if (HennaBackTex)
     {
         INT Count = GConsole->GetHennaSlotCount();
@@ -569,6 +587,17 @@ NW_HOOK_METHOD(0x10094b90, NCEquipItemWnd, FindItem)
 INT NCEquipItemWnd::OnLButtonDown(WPARAM wParam, LPARAM lParam)
 {
     guard(NCEquipItemWnd::OnLButtonDown);
+#if NW_CUSTOM
+    // custom: a click on the effect button asks for the picker and leaves the weapon where it is
+    if (NCustomInventory::ClickEffectButton(this, WornWeapon(this), LOWORD(lParam), HIWORD(lParam)))
+    {
+        UnselectAll();
+        Selected = -1;
+        SelectedIndex = -1;
+        bDragging = 0;
+        return 1;
+    }
+#endif
     INT Slot = HitTest(LOWORD(lParam), HIWORD(lParam));
     HoverSlot = Slot;
     Selected = Slot;
@@ -633,6 +662,10 @@ INT NCEquipItemWnd::OnMouseMove(WPARAM wParam, LPARAM lParam)
     INT Y = HIWORD(lParam);
     HoverSlot = HitTest(X, Y);
     HoverHenna = HitTestHenna(X, Y);
+#if NW_CUSTOM
+    if (NCustomInventory::OverEffectButton(this, WornWeapon(this), X, Y))
+        HoverSlot = -1;   // custom: no item tool tip over the effect button
+#endif
     if (IsFocused())
     {
         if (bDragging && Selected >= 0 && Selected < NumSlots && SelectedIndex < Items.Num() && SelectedIndex >= 0)
@@ -924,6 +957,14 @@ NW_HOOK_METHOD(0x10096da0, NCEquipItemWnd, OnRButtonDown)
 // 0x10097240 (vslot 64) - takes off the item of the slot under the mouse; the release that follows moves nothing
 INT NCEquipItemWnd::OnLButtonDblClick(WPARAM wParam, LPARAM lParam)
 {
+#if NW_CUSTOM
+    // custom: a double click on the effect button (its first click opened the picker) does not take the weapon off
+    if (NCustomInventory::OverEffectButton(this, WornWeapon(this), LOWORD(lParam), HIWORD(lParam)))
+    {
+        bDragging = 0;
+        return 1;
+    }
+#endif
     bNoDrag = 1;
     Selected = HitTest(LOWORD(lParam), HIWORD(lParam));
     if (Selected >= 0 && Selected < NumSlots)
