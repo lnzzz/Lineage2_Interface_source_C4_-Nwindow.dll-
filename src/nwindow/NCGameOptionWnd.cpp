@@ -17,6 +17,9 @@
 #include "nwindow/NCGDevice.h"
 #include "nwindow/NConsoleWnd.h"
 #include "nwindow/NKeyCrypt.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomTriumph.h"
+#endif
 
 // 0x100cb430 - NCWnd's constructor; the three never-made pages and the game pad box (only made with a game pad) cleared
 NCGameOptionWnd::NCGameOptionWnd()
@@ -107,6 +110,9 @@ INT NCGameOptionWnd::OnCreate()
     KeyCryptBox->ID = NID_GAMEOPT_KEYCRYPT;
     KeyCryptBox->SetPosition(25, 217, 100, 12);
     CreateChild(KeyCryptBox, NWS_VISIBLE);
+#if NW_CUSTOM
+    NCustomTriumph::OnCreate(this);   // custom: the Triumph weapons' effects, before InitItems loads the settings
+#endif
     InitItems();
     return 1;
 }
@@ -150,6 +156,9 @@ INT NCGameOptionWnd::OnDestroy()
     DestroyChild(this, SystemMsgDamageBox);
     DestroyChild(this, SystemMsgItemBox);
     DestroyChild(this, KeyCryptBox);
+#if NW_CUSTOM
+    NCustomTriumph::OnDestroy(this);
+#endif
     NCWnd::OnDestroy();
     return 1;
     unguard;
@@ -360,6 +369,9 @@ void NCGameOptionWnd::LoadSettings()
         KeyCryptBox->bDisabled = 0;
     else
         KeyCryptBox->bDisabled = 1;
+#if NW_CUSTOM
+    NCustomTriumph::OnLoadSettings(this);
+#endif
 }
 NW_HOOK_METHOD(0x100c7f60, NCGameOptionWnd, LoadSettings)
 
@@ -484,6 +496,9 @@ void NCGameOptionWnd::Apply()
         KeyCryptLoadAtStartup(1);   // the key encryption driver at startup
     else
         KeyCryptLoadAtStartup(0);
+#if NW_CUSTOM
+    NCustomTriumph::OnApply(this);
+#endif
 }
 NW_HOOK_METHOD(0x100c8530, NCGameOptionWnd, Apply)
 

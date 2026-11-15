@@ -56,10 +56,18 @@ build standalone; el build hook sigue siendo fiel al original.
   aplica con OK / Aplicar, como las demás opciones (el `Apply` original pone los volúmenes; Off corta lo que suena), y
   ahí se guardan el estado y los niveles en `[Audio]` (`MuteAll`, `Level0` .. `Level3`: sonido, música y las dos voces,
   0 = "5" .. 5 = Off). Cancelar no cambia nada: al abrir la página se ve lo guardado.
+- **Efectos de las armas Triumph** (`src/custom/NCustomTriumph.cpp`): dos checkboxes en Opciones → Game, debajo de
+  "3D Arrow", donde C4 sacó la calidad de las capturas: "Ver efectos de mis armas Triumph" y "Ver efectos de armas
+  Triumph de otros". Vienen tildados.
+  - Se guardan con OK / Aplicar en `[Triumph]` (`ShowOwn`, `ShowOthers`).
+  - Dentro del mundo, se mandan al server con el bypass `triumphfx view <propias> <de otros>`.
+  - El server los olvida con el personaje, así que la DLL los vuelve a mandar 3 s después de cada entrada al mundo
+    (`Tick`, desde `NCustomShortCuts::Tick`), solo si alguno está destildado.
+  - Los dibuja el server: manda el arma sin efecto a quien no los quiere ver.
 - **GameGuard del login**: la respuesta automática devuelve la misma consulta en vez de ceros (como el parche que el
   cliente usaba con la DLL original).
 
-La configuración queda en `system\NWindowCustom.ini` (`[ShortCut]`, `[AutoPotion]`, `[Damage]` y `[Audio]`).
+La configuración queda en `system\NWindowCustom.ini` (`[ShortCut]`, `[AutoPotion]`, `[Damage]`, `[Audio]` y `[Triumph]`).
 
 ## Correcciones de la reconstrucción
 

@@ -4,6 +4,7 @@
 #include "nwindow/NCustomShortCuts.h"
 #include "nwindow/NCustomAutoPotion.h"
 #include "nwindow/NCustomDamage.h"
+#include "nwindow/NCustomTriumph.h"
 #include "nwindow/NCButton.h"
 #include "nwindow/NCCheckBox.h"
 #include "nwindow/NCConsole.h"
@@ -719,6 +720,7 @@ void NCustomShortCuts::Destroy(NCConsole* Desktop)
 void NCustomShortCuts::Tick()
 {
     NCustomAutoPotion::Tick();
+    NCustomTriumph::Tick();
     NCWnd* Menu = GConsole && GConsole->Desktop ? (NCWnd*)GDesktop->MenuWnd : NULL;
     if (Menu && GDesktop->Width > 0 && Menu->ScreenX + Menu->Width > GDesktop->Width)
         Menu->SetPosition((INT)(GDesktop->Width - Menu->Width), Menu->ScreenY, 0, 0, 0, 0, 3);   // a place saved for the narrower bar
