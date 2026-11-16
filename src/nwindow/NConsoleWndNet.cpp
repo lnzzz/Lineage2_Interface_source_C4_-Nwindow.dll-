@@ -20,6 +20,7 @@
 #include "nwindow/NConsoleWndExt.h"
 #if NW_CUSTOM
 #include "nwindow/NCustomShortCuts.h"
+#include "nwindow/NCustomHwid.h"
 #endif
 
 // interface sounds (FL2NetNotify::OnInterfacePlaySound; names ours)
@@ -62,6 +63,9 @@ NW_HOOK_METHOD(0x10064ee0, NConsoleWnd, SendChatMsgToServer)
 UBOOL NConsoleWnd::RequestAuthLogin(const TCHAR* Account, const TCHAR* Password)
 {
     guard(NConsoleWnd::RequestAuthLogin);
+#if NW_CUSTOM
+    NCustomHwid::SetAccount(Account);   // custom: the HWID signature is tied to this account
+#endif
     return Engine->NetHandler->RequestAuthLogin((TCHAR*)Account, (TCHAR*)Password) != 0;
     unguard;
 }

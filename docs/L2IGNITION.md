@@ -76,7 +76,7 @@ build standalone; el build hook sigue siendo fiel al original.
   - Es solo una traba: se saltea cerrando el handle del mutex o usando la `NWindow.dll` original. El control firme es
     el HWID que verifica el server.
 - **HWID** (`src/custom/NCustomHwid.cpp`, desde `NConsoleWnd::ReceiveCharacterInfoX`): cada vez que llega la lista de
-  personajes, antes de elegir uno, manda al server el bypass `hwid 1 <smbios> <win> <disk>`.
+  personajes, antes de elegir uno, manda al server el bypass `hwid 1 <smbios> <win> <disk> <firma>`.
   - Cada campo son los primeros 16 bytes de `SHA-256("L2Ignition.hwid.1|<nombre>|<valor>")` en hex, o `-` si no hay
     dato. Los valores crudos no salen de la PC.
   - `smbios`: el UUID del sistema (tipo 1) y la serie de la placa madre (tipo 2) de `GetSystemFirmwareTable('RSMB')`,
@@ -84,7 +84,11 @@ build standalone; el build hook sigue siendo fiel al original.
   - `win`: el `MachineGuid` del registro, en la vista de 64 bits (`KEY_WOW64_64KEY`, porque el cliente es de 32 bits).
   - `disk`: la serie del disco físico donde está Windows. Se lee con `IOCTL_STORAGE_QUERY_PROPERTY` sobre un handle
     abierto sin acceso, así que no pide permisos de administrador.
-  - El server de L2 Ignition decide con eso qué PC es (`docs/hwid.md` de su repo).
+  - `firma`: los primeros 16 bytes de `HMAC-SHA256(clave, "L2Ignition.hwid.sig.1|<cuenta>|<smbios> <win> <disk>")` en
+    hex.
+    - La cuenta, en minúsculas, la guarda `NConsoleWnd::RequestAuthLogin` en cada login.
+    - La clave no está en el repo: ver "Compilar". Sin clave, la firma es `-`.
+  - El server de L2 Ignition decide con eso qué PC es y revisa la firma (`docs/hwid.md` de su repo).
 
 La configuración queda en `system\NWindowCustom.ini` (`[ShortCut]`, `[AutoPotion]`, `[Damage]`, `[Audio]` y `[Triumph]`).
 
@@ -115,5 +119,18 @@ cmake --build build --config Release --target NWindowStandalone
 
 Sale `build\standalone\Release\NWindow.dll`. En el repo del servidor va a `ops/client/nwindow/NWindow.dll`, y
 `ops/client/build_system.py` la pone en el `system` que se reparte.
+
+**La clave de la firma del HWID** nunca va a git. Para la DLL que se reparte, hay que configurar con un archivo local
+que tenga la línea `HWID_SECRET=<64 hex>`: en L2 Ignition es `ops/credentials.local.txt` del repo del servidor, la
+misma clave que el server tiene en `HWID_SECRET`.
+
+```bat
+cmake build -DNWD_HWID_KEY_FILE=C:/Users/drone/Desktop/L2Server/ops/credentials.local.txt
+```
+
+- CMake escribe `build/generated/NCustomHwidKey.h` con la clave enmascarada con XOR. La máscara sale de la clave, así
+  que el header solo cambia si cambia la clave.
+- El valor queda en la caché de CMake, así que alcanza con hacerlo una vez por carpeta `build`.
+- Sin la opción, la DLL compila igual pero manda la firma `-`. Si el server tiene la clave, no le acepta el HWID.
 
 Probado con el cliente oficial NA de C4 (NWindow.dll del 13/01/2006, Engine.dll/Core.dll de enero de 2006) contra L2JLisvus.

@@ -6,6 +6,7 @@
 #include "nwindow/NConsoleWnd.h"
 #include <winioctl.h>
 #include <wincrypt.h>
+#include "NCustomHwidKey.h"   // generated in the build tree by CMakeLists.txt (NWD_HWID_KEY_FILE); never in git
 
 static const char* HashPrefix = "L2Ignition.hwid.1|";
 
@@ -248,6 +249,25 @@ static void ReadDiskSerial(FHwidText& Out)
     The hash and the bypass.
 -----------------------------------------------------------------------------*/
 
+// SHA-256 of two pieces one after the other (CryptoAPI, Windows XP SP3 and later)
+static UBOOL Sha256(const BYTE* A, INT LenA, const BYTE* B, INT LenB, BYTE Digest[32])
+{
+    HCRYPTPROV Prov = 0;
+    if (!CryptAcquireContextW(&Prov, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
+        return 0;
+    UBOOL bOk = 0;
+    HCRYPTHASH Hash = 0;
+    if (CryptCreateHash(Prov, CALG_SHA_256, 0, 0, &Hash))
+    {
+        DWORD DigestLen = 32;
+        bOk = CryptHashData(Hash, A, LenA, 0) && (!LenB || CryptHashData(Hash, B, LenB, 0))
+              && CryptGetHashParam(Hash, HP_HASHVAL, Digest, &DigestLen, 0) && DigestLen == 32;
+        CryptDestroyHash(Hash);
+    }
+    CryptReleaseContext(Prov, 0);
+    return bOk;
+}
+
 // first 16 bytes of SHA-256(prefix + name + '|' + value) as 32 lowercase hex digits; "-" for no value or no hash
 static void HashField(const char* Name, const FHwidText& Value, char* Out)
 {
@@ -259,31 +279,72 @@ static void HashField(const char* Name, const FHwidText& Value, char* Out)
     Input.Add(Name);
     Input.Add("|");
     Input.Add(Value.Data, Value.Len);
-
-    HCRYPTPROV Prov = 0;
-    if (!CryptAcquireContextW(&Prov, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
-        return;
-    HCRYPTHASH Hash = 0;
     BYTE Digest[32];
-    DWORD DigestLen = sizeof(Digest);
-    if (CryptCreateHash(Prov, CALG_SHA_256, 0, 0, &Hash))
+    if (Sha256((const BYTE*)Input.Data, Input.Len, NULL, 0, Digest))
     {
-        if (CryptHashData(Hash, (const BYTE*)Input.Data, Input.Len, 0)
-            && CryptGetHashParam(Hash, HP_HASHVAL, Digest, &DigestLen, 0) && DigestLen == 32)
-        {
-            FHwidText Hex;
-            Hex.AddHex(Digest, 16);
-            lstrcpyA(Out, Hex.Data);
-        }
-        CryptDestroyHash(Hash);
+        FHwidText Hex;
+        Hex.AddHex(Digest, 16);
+        lstrcpyA(Out, Hex.Data);
     }
-    CryptReleaseContext(Prov, 0);
+}
+
+/*-----------------------------------------------------------------------------
+    The signature: first 16 bytes of HMAC-SHA256(key, "L2Ignition.hwid.sig.1|<account>|<smbios> <win> <disk>") in hex.
+    The key comes from the build (NWD_HWID_KEY_FILE, see NCustomHwidKey.h in the build tree), XOR-masked in the image.
+    It ties the fields to the account, so a signed bypass taken from another account or made up is refused.
+-----------------------------------------------------------------------------*/
+
+static char GAccount[32] = { 0 };   // the account of the last login, lowercase ASCII as the game server keeps it
+
+void NCustomHwid::SetAccount(const TCHAR* Account)
+{
+    INT N = 0;
+    for (const TCHAR* S = Account; S && *S && N < (INT)sizeof(GAccount) - 1; S++)
+        if (*S > ' ' && *S < 0x80)
+            GAccount[N++] = (char)((*S >= 'A' && *S <= 'Z') ? *S + 32 : *S);
+    GAccount[N] = 0;
+}
+
+static void Sign(const char* Fields, char* Out)
+{
+    lstrcpyA(Out, "-");
+#if NW_HWID_SIGNED
+    if (!GAccount[0])
+        return;
+    BYTE Key[64];
+    ZeroMemory(Key, sizeof(Key));
+    for (INT i = 0; i < 32; i++)
+        Key[i] = GHwidKeyMasked[i] ^ GHwidKeyMask[i];
+    BYTE Pad[64];
+    for (INT i = 0; i < 64; i++)
+        Pad[i] = Key[i] ^ 0x36;
+    FHwidText Message;
+    Message.Add("L2Ignition.hwid.sig.1|");
+    Message.Add(GAccount);
+    Message.Add("|");
+    Message.Add(Fields);
+    BYTE Inner[32], Digest[32];
+    UBOOL bOk = Sha256(Pad, 64, (const BYTE*)Message.Data, Message.Len, Inner);
+    for (INT i = 0; i < 64; i++)
+        Pad[i] = Key[i] ^ 0x5C;
+    bOk = bOk && Sha256(Pad, 64, Inner, 32, Digest);
+    SecureZeroMemory(Key, sizeof(Key));
+    SecureZeroMemory(Pad, sizeof(Pad));
+    if (bOk)
+    {
+        FHwidText Hex;
+        Hex.AddHex(Digest, 16);
+        lstrcpyA(Out, Hex.Data);
+    }
+#else
+    (void)Fields;
+#endif
 }
 
 void NCustomHwid::Send()
 {
-    static TCHAR Bypass[160] = { 0 };
-    if (!Bypass[0])
+    static char Fields[120] = { 0 };
+    if (!Fields[0])
     {
         FHwidText Smbios, Win, Disk;
         ReadSmbios(Smbios);
@@ -293,10 +354,14 @@ void NCustomHwid::Send()
         HashField("smbios", Smbios, H1);
         HashField("win", Win, H2);
         HashField("disk", Disk, H3);
-        wsprintfW(Bypass, TEXT("hwid 1 %S %S %S"), H1, H2, H3);
+        wsprintfA(Fields, "%s %s %s", H1, H2, H3);
     }
     if (!GConsole)
         return;
+    char Signature[40];
+    Sign(Fields, Signature);   // per send: another account may log in with the same client
+    TCHAR Bypass[200];
+    wsprintfW(Bypass, TEXT("hwid 1 %S %S"), Fields, Signature);
     L2ParamStack Params(10);
     Params.PushBack((void*)Bypass);
     GConsole->RequestBypassToServer(Params);
