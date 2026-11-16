@@ -10,6 +10,9 @@
 #include "nwindow/NCItemWnd.h"
 #include "nwindow/NCConsole.h"
 #include "nwindow/NDialogInfo.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomSingleClient.h"
+#endif
 
 typedef TArray<NTimer> TTimerArray;
 typedef TArray<NSysMsgParam> TSysMsgParamArray;
@@ -57,6 +60,9 @@ NConsoleWnd::NConsoleWnd()
     WordWrapperWnd = NULL;
     SavedL2Mark = 0;
     bL2MarkSaved = 0;
+#if NW_CUSTOM
+    NCustomSingleClient::Check();   // custom: a second client on the PC closes here, before the login screen
+#endif
 }
 #endif
 NW_CHECK_VTABLE_FOR(NConsoleWnd, UObject, 0x101b2428, 448)

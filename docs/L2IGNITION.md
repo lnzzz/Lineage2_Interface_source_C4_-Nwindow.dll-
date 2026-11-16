@@ -66,6 +66,15 @@ build standalone; el build hook sigue siendo fiel al original.
   - Los dibuja el server: manda el arma sin efecto a quien no los quiere ver.
 - **GameGuard del login**: la respuesta automática devuelve la misma consulta en vez de ceros (como el parche que el
   cliente usaba con la DLL original).
+- **Un cliente por PC** (`src/custom/NCustomSingleClient.cpp`, desde el constructor de `NConsoleWnd`):
+  - El primer cliente toma el mutex `Global\L2Ignition.SingleClient` y lo tiene hasta cerrarse. `Global\` hace que
+    cuente también otra sesión de Windows de la misma PC.
+  - Un segundo cliente lo encuentra tomado, esconde su ventana, avisa "Ya hay un cliente de L2 Ignition abierto en esta
+    PC" y se cierra antes de la pantalla de login.
+  - Si el `ServerAddr` de `l2.ini` es la misma PC (`127.x`, `localhost`, `::1`), no se toma el mutex. Así se pueden
+    abrir varios clientes de prueba contra un server local, también al lado de uno que juega en el server real.
+  - Es solo una traba: se saltea cerrando el handle del mutex o usando la `NWindow.dll` original. El control firme es
+    el HWID que verifica el server.
 
 La configuración queda en `system\NWindowCustom.ini` (`[ShortCut]`, `[AutoPotion]`, `[Damage]`, `[Audio]` y `[Triumph]`).
 
