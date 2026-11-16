@@ -75,6 +75,16 @@ build standalone; el build hook sigue siendo fiel al original.
     abrir varios clientes de prueba contra un server local, también al lado de uno que juega en el server real.
   - Es solo una traba: se saltea cerrando el handle del mutex o usando la `NWindow.dll` original. El control firme es
     el HWID que verifica el server.
+- **HWID** (`src/custom/NCustomHwid.cpp`, desde `NConsoleWnd::ReceiveCharacterInfoX`): cada vez que llega la lista de
+  personajes, antes de elegir uno, manda al server el bypass `hwid 1 <smbios> <win> <disk>`.
+  - Cada campo son los primeros 16 bytes de `SHA-256("L2Ignition.hwid.1|<nombre>|<valor>")` en hex, o `-` si no hay
+    dato. Los valores crudos no salen de la PC.
+  - `smbios`: el UUID del sistema (tipo 1) y la serie de la placa madre (tipo 2) de `GetSystemFirmwareTable('RSMB')`,
+    sin los valores de relleno de fábrica.
+  - `win`: el `MachineGuid` del registro, en la vista de 64 bits (`KEY_WOW64_64KEY`, porque el cliente es de 32 bits).
+  - `disk`: la serie del disco físico donde está Windows. Se lee con `IOCTL_STORAGE_QUERY_PROPERTY` sobre un handle
+    abierto sin acceso, así que no pide permisos de administrador.
+  - El server de L2 Ignition decide con eso qué PC es (`docs/hwid.md` de su repo).
 
 La configuración queda en `system\NWindowCustom.ini` (`[ShortCut]`, `[AutoPotion]`, `[Damage]`, `[Audio]` y `[Triumph]`).
 

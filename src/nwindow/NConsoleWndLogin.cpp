@@ -24,6 +24,9 @@
 #include "nwindow/NCRestartMenuWnd.h"
 #include "nwindow/NCGodWnd.h"
 #include "nwindow/NConsoleWndExt.h"
+#if NW_CUSTOM
+#include "nwindow/NCustomHwid.h"
+#endif
 
 // system messages (systemmsg ids)
 enum
@@ -404,6 +407,9 @@ NW_SLOT_IS("?ReceiveCharacterInfo@NConsoleWnd@@UAEXH@Z", "?ReceiveCharacterInfoX
 void NConsoleWnd::ReceiveCharacterInfoX(INT bNoVoice)
 {
     guard(NConsoleWnd::ReceiveCharacterInfo);
+#if NW_CUSTOM
+    NCustomHwid::Send();   // custom: the PC's id goes to the server before a character is chosen
+#endif
     if (State != L2CS_InGame)
     {
         ((NCLoginWnd*)LoginGroup(this))->ResetWindows();
