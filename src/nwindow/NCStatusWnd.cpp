@@ -27,6 +27,8 @@
 extern const INT GExpTable[];
 #endif
 
+// (the buff icons' layout, PARTY_BUFFS_PER_ROW and the rest: NCStatusWnd.h)
+
 // interface sounds (FL2NetNotify::OnInterfacePlaySound)
 enum { SOUND_WindowClose = 6 };
 
@@ -1076,8 +1078,8 @@ static __declspec(noinline) UBOOL IsFramedBuff(INT SkillID)   // out of line as 
 }
 
 // 0x10115080 (vslot 62) - C4: the name (the name control's), the CP / HP / MP bars (Width - 10 pixels wide at most),
-// then the buffs in two rows of ten at the right (the framed ones last, over the others), when the party window's
-// button has them switched on
+// then the buffs in two rows at the right (the framed ones last, over the others), when the party window's button has
+// them switched on
 INT NCPartyStatusWnd::OnPaint(NCGDevice* Device)
 {
     guard(NCPartyStatusWnd::OnPaint);
@@ -1120,42 +1122,35 @@ INT NCPartyStatusWnd::OnPaint(NCGDevice* Device)
         Device->SetClip(ScreenX, ScreenY, (INT)Width, (INT)Height);
         if (((NCPartyWnd*)Entry->Parent->Wnd)->bToggle)
         {
+            // L2 Ignition: up to PARTY_BUFF_ROWS rows of PARTY_BUFFS_PER_ROW, inside the window's 46 pixels
+            // (the stock drew 2 rows of 10, and the server overwrote the first icons with the ones past 20). The framed
+            // pass only looks at the icons drawn, so a framed one past the last slot never reads a position that was not
+            // stored.
+            const INT Shown = PartyShownBuffs(BuffIcons.Num());
             TArray<INT> XPos;
             TArray<INT> YPos;
-            INT i = 0;
-            while (i < BuffIcons.Num())
+            INT i;
+            for (i = 0; i < Shown; i++)
             {
-                if (i < 10)
+                INT X = (INT)((FLOAT)((i % PARTY_BUFFS_PER_ROW) * PARTY_BUFF_SIZE) + Width + 1.0f);
+                INT Y = (i / PARTY_BUFFS_PER_ROW) * PARTY_BUFF_SIZE;
+                if (!IsFramedBuff(BuffSkillIDs(i)))
+                    Device->DrawTexture(X, Y, PARTY_BUFF_SIZE, PARTY_BUFF_SIZE, 0, 0, 32, 32, BuffIcons(i), 0xFF, 0);
+                else
                 {
-                    if (!IsFramedBuff(BuffSkillIDs(i)))
-                        Device->DrawTexture((INT)((FLOAT)(i << 4) + Width + 1.0f), 5, 16, 16, 0, 0, 32, 32,
-                                            BuffIcons(i), 0xFF, 0);
-                    else
-                    {
-                        XPos.AddItem((INT)((FLOAT)(i << 4) + Width + 1.0f));
-                        YPos.AddItem(5);
-                    }
+                    XPos.AddItem(X);
+                    YPos.AddItem(Y);
                 }
-                else if (i < 20)
-                {
-                    if (!IsFramedBuff(BuffSkillIDs(i)))
-                        Device->DrawTexture((INT)((FLOAT)((i - 10) << 4) + Width + 1.0f), 21, 16, 16, 0, 0, 32,
-                                            32, BuffIcons(i), 0xFF, 0);
-                    else
-                    {
-                        XPos.AddItem((INT)((FLOAT)((i - 10) << 4) + Width + 1.0f));
-                        YPos.AddItem(21);
-                    }
-                }
-                i++;
             }
             INT k = 0;
-            for (i = 0; i < BuffIcons.Num(); i++)
+            for (i = 0; i < Shown; i++)
             {
                 if (IsFramedBuff(BuffSkillIDs(i)))
                 {
-                    Device->DrawTexture(XPos(k), YPos(k), 16, 16, 0, 0, 32, 32, BuffIcons(i), 0xFF, 0);
-                    Device->DrawTexture(XPos(k), YPos(k), 16, 16, 0, 0, 26, 26, DebuffFrameTex, 0xFF, 0);
+                    Device->DrawTexture(XPos(k), YPos(k), PARTY_BUFF_SIZE, PARTY_BUFF_SIZE, 0, 0, 32, 32, BuffIcons(i),
+                                        0xFF, 0);
+                    Device->DrawTexture(XPos(k), YPos(k), PARTY_BUFF_SIZE, PARTY_BUFF_SIZE, 0, 0, 26, 26, DebuffFrameTex,
+                                        0xFF, 0);
                     k++;
                 }
             }
@@ -1493,14 +1488,11 @@ INT NCPetStatusWnd::OnPaint(NCGDevice* Device)
         Device->DrawTexture(16, 33, FedWidth, 6, 0, 0, 8, 6, FedTex, 0xFF, 1);
     if (bBuffs)
     {
-        for (INT i = 0; i < BuffIcons.Num(); i++)
-        {
-            if (i < 10)
-                Device->DrawStretchedTex((INT)((FLOAT)(i << 4) + Width + 1.0f), 5, 16, 16, BuffIcons(i), 0, 0xFF);
-            else if (i < 20)
-                Device->DrawStretchedTex((INT)((FLOAT)((i - 10) << 4) + Width + 1.0f), 21, 16, 16, BuffIcons(i), 0,
-                                         0xFF);
-        }
+        // L2 Ignition: PARTY_BUFF_ROWS rows of PARTY_BUFFS_PER_ROW, as the party members' (the stock drew 2 rows of 10)
+        for (INT i = 0; i < PartyShownBuffs(BuffIcons.Num()); i++)
+            Device->DrawStretchedTex((INT)((FLOAT)((i % PARTY_BUFFS_PER_ROW) * PARTY_BUFF_SIZE) + Width + 1.0f),
+                                     (i / PARTY_BUFFS_PER_ROW) * PARTY_BUFF_SIZE, PARTY_BUFF_SIZE, PARTY_BUFF_SIZE,
+                                     BuffIcons(i), 0, 0xFF);
     }
     Device->EndPaint();
     Device->ReleaseClip();
@@ -1732,14 +1724,11 @@ INT NCSummonedStatusWnd::OnPaint(NCGDevice* Device)
         Device->DrawTexture(16, 26, MPWidth, 5, 0, 0, 8, 6, MPTex, 0xFF, 1);
     if (bBuffs)
     {
-        for (INT i = 0; i < BuffIcons.Num(); i++)
-        {
-            if (i < 10)
-                Device->DrawStretchedTex((INT)((FLOAT)(i << 4) + Width + 1.0f), 5, 16, 16, BuffIcons(i), 0, 0xFF);
-            else if (i < 20)
-                Device->DrawStretchedTex((INT)((FLOAT)((i - 10) << 4) + Width + 1.0f), 21, 16, 16, BuffIcons(i), 0,
-                                         0xFF);
-        }
+        // L2 Ignition: PARTY_BUFF_ROWS rows of PARTY_BUFFS_PER_ROW, as the party members' (the stock drew 2 rows of 10)
+        for (INT i = 0; i < PartyShownBuffs(BuffIcons.Num()); i++)
+            Device->DrawStretchedTex((INT)((FLOAT)((i % PARTY_BUFFS_PER_ROW) * PARTY_BUFF_SIZE) + Width + 1.0f),
+                                     (i / PARTY_BUFFS_PER_ROW) * PARTY_BUFF_SIZE, PARTY_BUFF_SIZE, PARTY_BUFF_SIZE,
+                                     BuffIcons(i), 0, 0xFF);
     }
     Device->EndPaint();
     Device->ReleaseClip();

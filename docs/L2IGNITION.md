@@ -18,6 +18,13 @@ build standalone; el build hook sigue siendo fiel al original.
 - **Menú inferior**: dos íconos más (barras y autopociones).
 - **Ventana de buffs** (`src/nwindow/NCAbnormalStatusWnd.cpp`): hasta 40 íconos en 4 filas de 10 (la original guarda 31
   y dibuja 30). La lista secundaria y el ícono extra van en la fila siguiente. El server manda 40 con `BuffIconRows = 4`.
+- **Buffs de la party, la mascota y el summon** (`NCPartyStatusWnd::OnPaint`, `NCPetStatusWnd::OnPaint` y
+  `NCSummonedStatusWnd::OnPaint` en `src/nwindow/NCStatusWnd.cpp`, constantes en `NCStatusWnd.h`): como las 3
+  primeras filas de la ventana de buffs propia, en filas de 10 y hasta 30 íconos, en el orden en que los manda el
+  server (la original, 2 filas de 10 de 16 px desde y 5). Los íconos miden 15 px desde el borde de arriba: las 3 filas
+  ocupan 45 de los 46 px de cada miembro, así que la party no cambia de alto. El server manda como mucho 30
+  (`PartySpelled`): si hay más, deja afuera los últimos buffs y nunca los debuffs. Antes mandaba 20 y pisaba los
+  primeros con los que sobraban. Los debuffs (con marco) se dibujan al final.
 - **Inventario ancho** (`src/custom/NCustomInventory.cpp`): 640 x 372 en lugar de 256 x 401. A la izquierda el
   paperdoll: armadura y capa en una columna, joyas en la otra, arma y escudo abajo, el **modelo 3D del personaje** en el
   medio y los tatuajes debajo (las casillas vacías son los dibujos del fondo original, recortados). A la derecha, pestañas

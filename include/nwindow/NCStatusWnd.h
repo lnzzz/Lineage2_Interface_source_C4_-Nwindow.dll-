@@ -169,6 +169,16 @@ NW_ASSERT_OFFSET(NCTargetStatusWnd, BackTex3, 0x37C);
 NW_ASSERT_OFFSET(NCTargetStatusWnd, BuffToolTip, 0x394);
 NW_ASSERT_SIZE(NCTargetStatusWnd, 0x41C);
 
+// L2 Ignition: the buff icons at the right of a party member's, the pet's and the summon's windows, laid out like the
+// player's own buff window: rows of 10, up to 3 (30, what the server sends: PartySpelled), in the order the server lists
+// them, 15 pixels from the window's top (the stock drew two rows of 10 at 16 pixels from y 5). A member's window is 46
+// high: three rows of 15 take 45, so the members stay where they were.
+enum { PARTY_BUFFS_PER_ROW = 10, PARTY_BUFF_ROWS = 3, PARTY_BUFF_SIZE = 15 };
+inline INT PartyShownBuffs(INT Num)
+{
+    return Num < PARTY_BUFFS_PER_ROW * PARTY_BUFF_ROWS ? Num : PARTY_BUFFS_PER_ROW * PARTY_BUFF_ROWS;
+}
+
 // NCPartyStatusWnd - one party member (UClass "CPartyStatusWnd", 0x300): name, HP / MP bars.
 // A click targets the member (Ctrl: attacks), a right click targets what the member targets.
 class NCPartyStatusWnd : public NCStatusWnd
