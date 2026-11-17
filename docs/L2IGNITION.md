@@ -51,6 +51,14 @@ build standalone; el build hook sigue siendo fiel al original.
     - El doble clic sobre la estrella no la desequipa.
     - Con el mouse encima no sale el tooltip del ítem, y la estrella se ve más clara.
     - Una DLL vieja ignora las líneas `F`, y sin esas líneas la estrella no aparece.
+  - **Botón del casco de los sets White Crystal** (`PaintHelmetButton`, `OverHelmetButton` y `ClickHelmetButton`, con
+    los mismos ganchos):
+    - Es la misma estrella, en el casillero del casco (slot 1).
+    - Aparece cuando el casco equipado figura como `<id> H` en `NWindowItems.txt`.
+    - El clic pide el menú para mostrar u ocultar el casco del costume: el bypass `wchelm menu <object id>`, que
+      atiende `custom.WhiteCrystalHelmetManager`.
+    - Lo demás funciona igual que la estrella del arma: no levanta el casco, el doble clic no lo desequipa y no muestra
+      el tooltip.
 - **"Mute All Sounds"** (`src/custom/NCustomAudio.cpp`): un checkbox en Opciones → Audio, debajo de los cuatro volúmenes.
   Tildarlo guarda los niveles que muestran, los pone en Off y los deja en gris; destildarlo devuelve los guardados. Se
   aplica con OK / Aplicar, como las demás opciones (el `Apply` original pone los volúmenes; Off corta lo que suena), y

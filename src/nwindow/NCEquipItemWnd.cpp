@@ -36,6 +36,18 @@ static NItemEntry* WornWeapon(NCEquipItemWnd* Self)
     }
     return NULL;
 }
+
+// L2 Ignition: the worn helmet (slot 1), for the helmet button of the White Crystal helmets
+static NItemEntry* WornHelmet(NCEquipItemWnd* Self)
+{
+    for (INT i = 0; i < Self->Items.Num(); i++)
+    {
+        NItemEntry* Item = Self->Items(i);
+        if (Item && Self->GetEquipSlot(AsC4(Item)->BodyPart, AsC4(Item)->ObjectID) == 1)
+            return Item;
+    }
+    return NULL;
+}
 #endif
 #if NW_FEATURES
 // phase 6: ItemHoverTip (not in NWindow_C1: the hover tip of the item grids in the recent style)
@@ -389,6 +401,7 @@ INT NCEquipItemWnd::OnPaint(NCGDevice* Device)
     }
 #if NW_CUSTOM
     NCustomInventory::PaintEffectButton(this, Device, WornWeapon(this));   // custom: over the weapon's icon
+    NCustomInventory::PaintHelmetButton(this, Device, WornHelmet(this));   // custom: over the helmet's icon
 #endif
     if (HennaBackTex)
     {
@@ -589,7 +602,8 @@ INT NCEquipItemWnd::OnLButtonDown(WPARAM wParam, LPARAM lParam)
     guard(NCEquipItemWnd::OnLButtonDown);
 #if NW_CUSTOM
     // custom: a click on the effect button asks for the picker and leaves the weapon where it is
-    if (NCustomInventory::ClickEffectButton(this, WornWeapon(this), LOWORD(lParam), HIWORD(lParam)))
+    if (NCustomInventory::ClickEffectButton(this, WornWeapon(this), LOWORD(lParam), HIWORD(lParam))
+        || NCustomInventory::ClickHelmetButton(this, WornHelmet(this), LOWORD(lParam), HIWORD(lParam)))
     {
         UnselectAll();
         Selected = -1;
@@ -663,8 +677,13 @@ INT NCEquipItemWnd::OnMouseMove(WPARAM wParam, LPARAM lParam)
     HoverSlot = HitTest(X, Y);
     HoverHenna = HitTestHenna(X, Y);
 #if NW_CUSTOM
-    if (NCustomInventory::OverEffectButton(this, WornWeapon(this), X, Y))
-        HoverSlot = -1;   // custom: no item tool tip over the effect button
+    {
+        // custom: no item tool tip over the effect or helmet button (both asked, so that each remembers its hover)
+        UBOOL OverFx = NCustomInventory::OverEffectButton(this, WornWeapon(this), X, Y);
+        UBOOL OverHelm = NCustomInventory::OverHelmetButton(this, WornHelmet(this), X, Y);
+        if (OverFx || OverHelm)
+            HoverSlot = -1;
+    }
 #endif
     if (IsFocused())
     {
@@ -959,7 +978,8 @@ INT NCEquipItemWnd::OnLButtonDblClick(WPARAM wParam, LPARAM lParam)
 {
 #if NW_CUSTOM
     // custom: a double click on the effect button (its first click opened the picker) does not take the weapon off
-    if (NCustomInventory::OverEffectButton(this, WornWeapon(this), LOWORD(lParam), HIWORD(lParam)))
+    if (NCustomInventory::OverEffectButton(this, WornWeapon(this), LOWORD(lParam), HIWORD(lParam))
+        || NCustomInventory::OverHelmetButton(this, WornHelmet(this), LOWORD(lParam), HIWORD(lParam)))
     {
         bDragging = 0;
         return 1;
