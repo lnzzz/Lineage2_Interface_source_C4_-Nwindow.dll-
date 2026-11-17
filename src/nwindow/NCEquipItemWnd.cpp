@@ -37,7 +37,7 @@ static NItemEntry* WornWeapon(NCEquipItemWnd* Self)
     return NULL;
 }
 
-// L2 Ignition: the worn helmet (slot 1), for the helmet button of the White Crystal helmets
+// L2 Ignition: the worn helmet (slot 1), for the helmet button of the Light Crystal helmets
 static NItemEntry* WornHelmet(NCEquipItemWnd* Self)
 {
     for (INT i = 0; i < Self->Items.Num(); i++)

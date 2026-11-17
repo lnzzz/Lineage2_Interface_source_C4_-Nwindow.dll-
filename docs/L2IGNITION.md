@@ -58,7 +58,7 @@ build standalone; el build hook sigue siendo fiel al original.
     - El doble clic sobre la estrella no la desequipa.
     - Con el mouse encima no sale el tooltip del ítem, y la estrella se ve más clara.
     - Una DLL vieja ignora las líneas `F`, y sin esas líneas la estrella no aparece.
-  - **Botón del casco de los sets White Crystal** (`PaintHelmetButton`, `OverHelmetButton` y `ClickHelmetButton`, con
+  - **Botón del casco de los sets Light Crystal** (`PaintHelmetButton`, `OverHelmetButton` y `ClickHelmetButton`, con
     los mismos ganchos):
     - Es la misma estrella, en el casillero del casco (slot 1).
     - Aparece cuando el casco equipado figura como `<id> H` en `NWindowItems.txt`.

@@ -11,7 +11,7 @@
 // (the order is the one the page saves, ..\iwo). The kind of an etc item comes from system\NWindowItems.txt ("<item id>
 // <C|M>" lines: consumable, material; the client build writes it from the server's items), weapons, armor and jewels from
 // the item's own type. Its "<item id> F" lines are the weapons with the effect button (see PaintEffectButton) and its "<item id> H"
-// lines the White Crystal helmets with the helmet button (PaintHelmetButton). A filter keeps the page's items that match first (in their order) and shows only those; the order
+// lines the Light Crystal helmets with the helmet button (PaintHelmetButton). A filter keeps the page's items that match first (in their order) and shows only those; the order
 // the page had when the filter was chosen comes back with "Todo".
 //
 // The model is Engine.dll's FActorSceneNode (what UCanvas::DrawActor uses) with a camera of our own, drawn into its box with
@@ -79,7 +79,7 @@ namespace NCustomInventory
     UBOOL OverEffectButton(NCWnd* Doll, NItemEntry* Weapon, INT X, INT Y);    // remembers it for the paint
     UBOOL ClickEffectButton(NCWnd* Doll, NItemEntry* Weapon, INT X, INT Y);   // sends the request when the click is on it
 
-    // L2 Ignition: the helmet button of the White Crystal helmets (custom.WhiteCrystalHelmetManager on the server). The same
+    // L2 Ignition: the helmet button of the Light Crystal helmets (custom.WhiteCrystalHelmetManager on the server). The same
     // star in the top right corner of the helmet slot, for the "<item id> H" lines of system\NWindowItems.txt: it asks for
     // the menu that shows or hides the costume helmet (bypass "wchelm menu <object id>"). Helmet: the paperdoll's helmet.
     void PaintHelmetButton(NCWnd* Doll, NCGDevice* Device, NItemEntry* Helmet);

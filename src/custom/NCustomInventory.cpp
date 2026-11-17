@@ -25,7 +25,7 @@ using namespace NCustomInventory;
 // the kinds an item is sorted by (in this order) and the filters
 enum { KIND_Money, KIND_Weapon, KIND_Armor, KIND_Jewel, KIND_Consumable, KIND_Material, KIND_Other };
 enum { KIND_EffectWeapon = 100 };   // NWindowItems.txt "F": a weapon with the effect button (not a kind to sort by)
-enum { KIND_HelmetButton = 101 };   // NWindowItems.txt "H": a White Crystal helmet with the helmet button
+enum { KIND_HelmetButton = 101 };   // NWindowItems.txt "H": a Light Crystal helmet with the helmet button
 enum { FILTER_All, FILTER_Weapon, FILTER_Armor, FILTER_Jewel, FILTER_Consumable, FILTER_Material, FILTER_Other, Filters };
 
 // the tabs over the grid: the type filters of the "Item" page, then the "Quest" page; the sort button under the grid
@@ -746,11 +746,11 @@ UBOOL NCustomInventory::ClickEffectButton(NCWnd* Doll, NItemEntry* Weapon, INT X
 }
 
 /*-----------------------------------------------------------------------------
-    The helmet button of the White Crystal helmets (L2 Ignition).
+    The helmet button of the Light Crystal helmets (L2 Ignition).
 -----------------------------------------------------------------------------*/
 
 // The same star as the effect button, in the top right corner of the helmet slot (slot 1): it asks the server for the menu
-// that shows or hides the costume helmet of the worn White Crystal helmet (custom.WhiteCrystalHelmetManager).
+// that shows or hides the costume helmet of the worn Light Crystal helmet (custom.WhiteCrystalHelmetManager).
 static UBOOL GHelmHover;
 
 static UBOOL HasHelmetButton(NItemEntry* Helmet)
