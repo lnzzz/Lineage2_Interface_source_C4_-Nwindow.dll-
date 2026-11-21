@@ -20,6 +20,7 @@
 #include "nwindow/NCPetitionWnd.h"
 #include "nwindow/NCShortCutWnd.h"
 #if NW_CUSTOM
+#include "nwindow/NCustomGraphics.h"
 #include "nwindow/NCustomShortCuts.h"
 #endif
 #include "nwindow/NCStatusWnd.h"
@@ -369,6 +370,7 @@ void NConsoleWnd::Tick(FLOAT InDeltaTime)
     if (Desktop && GetDesktop()->ShortCutWnd)
         GetDesktop()->ShortCutWnd->Tick(InDeltaTime);
 #if NW_CUSTOM
+    NCustomGraphics::Tick();   // custom: the HD textures path and the anisotropic filter, from the login screen on
     if (Desktop)
         NCustomShortCuts::Tick();   // custom: the extra bars follow the main bar
 #endif
