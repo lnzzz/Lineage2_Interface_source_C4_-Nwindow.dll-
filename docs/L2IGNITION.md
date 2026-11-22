@@ -79,29 +79,6 @@ build standalone; el build hook sigue siendo fiel al original.
   - El server los olvida con el personaje, así que la DLL los vuelve a mandar 3 s después de cada entrada al mundo
     (`Tick`, desde `NCustomShortCuts::Tick`), solo si alguno está destildado.
   - Los dibuja el server: manda el arma sin efecto a quien no los quiere ver.
-- **Filtro anisotrópico y texturas HD** (`src/custom/NCustomGraphics.cpp`): dos checkboxes en Opciones → Video, en la
-  columna de los checkboxes: "Filtro anisotropico" al lado de "Texture Filter" y "Texturas HD (al reiniciar)" debajo.
-  Vienen destildados, así el cliente se ve como el original. Se guardan con OK / Aplicar en `[Graphics]`
-  (`Anisotropy`, `HDTextures`).
-  - **Filtro anisotrópico**, se aplica al instante. El `l2.ini` repartido trae `LevelOfAnisotropy=1`, y D3DDrv solo lo
-    usa en `SetRes`; su caché de estados y `SetUseTrilinear` vuelven a poner el filtro lineal.
-    - Por eso la DLL envuelve `IDirect3DDevice9::SetSamplerState` (slot 69 de la vtable del device, que está en
-      `UD3DRenderDevice+0x4758`).
-    - Con el checkbox tildado, un filtro de minificación lineal pasa a anisotrópico y el máximo de anisotropía pasa al
-      del device (hasta 16x).
-    - El filtro de punto ("Texture Filter" destildado) y los filtros de magnificación y de mips quedan como los pide el
-      motor.
-    - Al cambiar el checkbox se vuelven a poner los 16 samplers desde lo último que pidió el motor.
-  - **Texturas HD**, se aplica al reiniciar. Si existe la carpeta `TexturesHD` al lado de `system`, la DLL agrega
-    `../TexturesHD/*.utx` como primera ruta de `GSys->Paths` (`USystem+0x64`, la lista `Paths` de `[Core.System]`).
-    - Lo hace en el primer tick de la consola, en la pantalla de login, antes de que cargue el mundo.
-    - `appFindPackageFile` recorre esa lista en cada carga, así que un paquete de `TexturesHD` con el mismo nombre que
-      uno del juego le gana al de `Textures`.
-    - Sin la carpeta el checkbox queda en gris. El cliente no vuelve a cargar paquetes ya cargados: por eso pide reiniciar.
-  - Probado en el juego (11/21): el piso de la selección de personaje y el pasto del Coliseo, con el filtro prendido y
-    apagado en vivo y al arrancar. Un `IgnIcons.utx` teñido de rojo en `TexturesHD` reemplazó al de `SysTextures` solo
-    con el checkbox tildado. El clic real en los checkboxes no se probó: los clics por PostMessage no llegan a la
-    interfaz.
 - **GameGuard del login**: la respuesta automática devuelve la misma consulta en vez de ceros (como el parche que el
   cliente usaba con la DLL original).
 - **Un cliente por PC** (`src/custom/NCustomSingleClient.cpp`, desde el constructor de `NConsoleWnd`):

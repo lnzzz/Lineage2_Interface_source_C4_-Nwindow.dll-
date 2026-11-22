@@ -10,9 +10,6 @@
 #include "nwindow/NCCheckBox.h"
 #include "nwindow/NCGDevice.h"
 #include "nwindow/NConsoleWnd.h"
-#if NW_CUSTOM
-#include "nwindow/NCustomGraphics.h"
-#endif
 
 #if NW_FEATURES
 // phase 6: WindowFix (the "Full Screen" box, docs/notas/F6_WindowFix.md)
@@ -111,9 +108,6 @@ INT NCVideoOptionWnd::OnCreate()
     ShadowBox = NewBox(this, 212, NID_VIDEO_SHADOW, 25, 270, 109);
     GroundDetailBox = NewBox(this, 213, NID_VIDEO_GROUNDDETAIL, 135, 270, 109);
     TextureFilterBox = NewBox(this, 464, NID_VIDEO_TEXTUREFILTER, 135, 287, 100);
-#if NW_CUSTOM
-    NCustomGraphics::OnCreate(this);   // custom: anisotropic filter and HD textures, before InitItems loads the settings
-#endif
     InitItems();
     return 1;
 }
@@ -154,9 +148,6 @@ INT NCVideoOptionWnd::OnDestroy()
     DestroyChild(this, UnusedD0[2]);
     DestroyChild(this, AntialiasCombo);
     DestroyChild(this, ScreenShotCombo);
-#if NW_CUSTOM
-    NCustomGraphics::OnDestroy(this);
-#endif
     NCWnd::OnDestroy();
     return 1;
     unguard;
@@ -330,9 +321,6 @@ static FORCEINLINE void SetBox(NCCheckBox* Box, UBOOL bValue)
 // end the anti-aliasing level (only with a multisampling device and a post processing kind that is not 3 .. 5)
 void NCVideoOptionWnd::LoadSettings()
 {
-#if NW_CUSTOM
-    NCustomGraphics::OnLoadSettings(this);   // custom: first, the stock code returns from the middle
-#endif
     INT Widths[100], Heights[100], Bits[100], Rates[100];
     INT Count = GConsole->Engine->GRenDev->GetRes(100, Widths, Heights, Bits);
     for (INT i = 0; i < Count; i++)
@@ -521,9 +509,6 @@ static FORCEINLINE void LoadFogRange(const TCHAR* StartKey, const TCHAR* EndKey,
 void NCVideoOptionWnd::Apply()
 {
     guard(NCVideoOptionWnd::Apply);
-#if NW_CUSTOM
-    NCustomGraphics::OnApply(this);
-#endif
     TCHAR Text[260];
     UBOOL bFullscreen = GConsole->Engine->Client->Viewports(0)->IsFullscreen();
 
